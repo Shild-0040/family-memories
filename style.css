@@ -229,6 +229,52 @@ body {
     font-style: italic;
 }
 
+/* 样式变体 3: 经典电影黄字 (底部居中，黄色黑边) */
+.caption-layer.film-yellow #caption-text {
+    color: #FFD700; /* 金黄色 */
+    text-shadow: 2px 2px 0px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    font-family: "SimHei", sans-serif; /* 黑体 */
+    font-weight: bold;
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+}
+
+/* 样式变体 4: 拍立得手写风 (白色卡片背景) */
+.caption-layer.postcard {
+    bottom: 15%;
+    transform: rotate(-2deg); /* 微微倾斜 */
+}
+.caption-layer.postcard #caption-text {
+    background: #fff;
+    color: #333;
+    padding: 10px 20px 30px 20px;
+    font-family: var(--font-art);
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    text-shadow: none;
+    font-size: 1.8rem;
+    /* 模拟拍立得底部留白 */
+    border-bottom: 40px solid #fff; 
+}
+
+/* 样式变体 5: 打字机效果 (单色极简) */
+.caption-layer.typewriter {
+    bottom: 50%;
+    transform: translateY(50%); /* 垂直居中 */
+}
+.caption-layer.typewriter #caption-text {
+    font-family: "Courier New", monospace;
+    font-size: 1.5rem;
+    background: rgba(0,0,0,0.7);
+    padding: 10px;
+    border-right: 2px solid #fff; /* 光标 */
+    animation: blink 0.75s step-end infinite;
+}
+
+@keyframes blink {
+    from, to { border-color: transparent }
+    50% { border-color: #fff; }
+}
+
 #caption-text {
     font-family: var(--font-art);
     font-size: 2.2rem;
