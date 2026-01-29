@@ -389,9 +389,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelector('.restart-btn').style.opacity = 1;
             }, lines.length * 2000 + 1000);
 
-            // Background Fireworks Loop
+            // 2. 启动背景烟花 (随机、舒缓)
             setInterval(() => {
-                if (Math.random() > 0.6) {
+                if (Math.random() > 0.5) { // 提高生成概率 (原 0.6)
                     const startX = random(width * 0.1, width * 0.9);
                     const targetX = random(width * 0.1, width * 0.9);
                     let targetY;
@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const color = colors[Math.floor(random(0, colors.length))];
                     createFirework(startX, targetX, targetY, color, false);
                 }
-            }, 1800);
+            }, 1200); // 频率提高50% (原 1800ms -> 1200ms)
         }
     }
 
