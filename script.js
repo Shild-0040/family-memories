@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const percent = Math.floor((loadedCount / totalAssets) * 100);
         
         if (!isEnterEnabled) {
-            btnText.textContent = `记忆恢复中... ${Math.min(percent, 99)}%`;
+            btnText.textContent = `资源加载中... ${Math.min(percent, 99)}%`;
         }
         
         if (loadedCount >= totalAssets) {
