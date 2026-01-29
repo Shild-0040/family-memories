@@ -122,6 +122,22 @@ document.addEventListener('DOMContentLoaded', () => {
         slideInterval = setInterval(nextSlide, SLIDE_DURATION);
     }
 
+    // 3. 随机切换字幕样式逻辑
+    function updateCaptionStyle() {
+        const captionLayer = document.querySelector('.caption-layer');
+        // 移除旧样式
+        captionLayer.classList.remove('vertical', 'movie-left');
+        
+        // 随机选择一种样式 (33% 竖排, 33% 左下, 33% 默认居中)
+        const rand = Math.random();
+        if (rand > 0.66) {
+            captionLayer.classList.add('vertical');
+        } else if (rand > 0.33) {
+            captionLayer.classList.add('movie-left');
+        }
+        // 否则保持默认 (居中)
+    }
+
     function showSlide(index) {
         // 预加载后续图片
         preloadNextImage(index);
@@ -155,7 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
             captionEl.style.transform = "translateY(20px)"; // 下沉
             
             setTimeout(() => {
+                // 切换文案内容
                 captionEl.textContent = captions[Math.floor(Math.random() * captions.length)];
+                
+                // 同时切换布局样式！
+                updateCaptionStyle();
+
                 captionEl.style.opacity = 1;
                 captionEl.style.transform = "translateY(0)"; // 上浮复位
             }, 1000);
