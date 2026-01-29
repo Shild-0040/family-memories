@@ -222,6 +222,18 @@ document.addEventListener('DOMContentLoaded', () => {
             slideBlurBg.style.backgroundImage = `url(${currentSlide.src})`;
         }
 
+        // 视频预热：如果下一张是视频，提前触发 load
+        // 这里的逻辑是：如果是倒数第二张（index === slides.length - 2），且最后一张是视频
+        if (index === slides.length - 2) {
+            const nextSlide = slides[index + 1];
+            if (nextSlide.tagName === 'VIDEO') {
+                // 此时用户已经有过交互（点击），所以 load/play 权限通常是有的
+                nextSlide.load(); 
+                // 甚至可以尝试静音播放一帧然后暂停，确保解码器就绪
+                // nextSlide.play().then(() => nextSlide.pause()).catch(() => {});
+            }
+        }
+
         // Progress Bar
         const progress = ((index + 1) / slides.length) * 100;
         progressBar.style.width = `${progress}%`;
@@ -270,7 +282,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function endSlideshow() {
         // clearInterval(slideInterval);
-        if (!bgm.paused) fadeOutAudio(bgm, () => bgm.pause());
+        // 如果是视频结束进来的，音乐已经停了；如果是图片进来的，音乐还在
+        // 我们统一逻辑：先确保音乐是暂停状态，然后重新播放并淡入
+        // 这样可以确保结尾的时候背景音乐是温柔地响起的
+        
+        bgm.pause();
+        bgm.currentTime = 0; // 可选：从头开始放，或者接着放看需求。这里从头开始更有仪式感
+        bgm.volume = 0;
+        bgm.play().then(() => fadeInAudio(bgm, 0.5)).catch(console.error);
         
         slideshowContainer.style.opacity = 0;
         slideshowContainer.style.pointerEvents = 'none'; // 禁用点击，防止触发切换
