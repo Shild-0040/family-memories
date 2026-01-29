@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const enterBtn = document.getElementById('enter-btn');
     const welcomeScreen = document.getElementById('welcome-screen');
     const slideshowContainer = document.getElementById('slideshow-container');
+    const slideBlurBg = document.getElementById('slide-blur-bg');
     const slides = document.querySelectorAll('.slide-item');
     const bgm = document.getElementById('bgm');
     const progressBar = document.querySelector('.progress-fill');
@@ -92,13 +93,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentSlide.classList.add('active');
 
+        // 更新模糊背景 (同步显示当前图片/视频的截图)
+        if (currentSlide.tagName === 'IMG') {
+            slideBlurBg.style.backgroundImage = `url(${currentSlide.src})`;
+        } else if (currentSlide.tagName === 'VIDEO') {
+            // 视频的话，尝试用第一帧或者保持上一张图
+            // 简单起见，可以保持不动，或者如果有封面图可以使用封面
+        }
+
         // 更新文案 (每3张换一次文案)
         if (index % 3 === 0) {
             const captionEl = document.getElementById('caption-text');
             captionEl.style.opacity = 0;
+            captionEl.style.transform = "translateY(20px)"; // 下沉
+            
             setTimeout(() => {
                 captionEl.textContent = captions[Math.floor(Math.random() * captions.length)];
                 captionEl.style.opacity = 1;
+                captionEl.style.transform = "translateY(0)"; // 上浮复位
             }, 1000);
         }
 

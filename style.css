@@ -95,10 +95,26 @@ body {
     opacity: 1;
 }
 
+/* 动态模糊背景 */
+.slide-blur-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(0.6);
+    transform: scale(1.1); /* 防止模糊边缘露白 */
+    z-index: 0;
+    transition: background-image 1s ease-in-out;
+}
+
 .slide-wrapper {
     width: 100%;
     height: 100%;
     position: relative;
+    z-index: 1; /* 确保图片在模糊背景之上 */
 }
 
 /* 兼容性优化 */
@@ -109,25 +125,27 @@ body {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background-color: #000;
+    background-color: transparent; /* 去掉纯黑背景，让模糊层透出来 */
     opacity: 0;
     transform: scale(1);
     -webkit-transform: scale(1); /* Safari/Chrome */
     -ms-transform: scale(1); /* IE 9 */
     transition: opacity 2s ease-in-out, transform 6s ease-out;
     -webkit-transition: opacity 2s ease-in-out, -webkit-transform 6s ease-out;
+    z-index: 2;
 }
 
 .slide-item.active {
     opacity: 1;
-    transform: scale(1.1);
-    -webkit-transform: scale(1.1);
-    z-index: 1;
+    transform: scale(1.05); /* 稍微减小放大倍数，保持优雅 */
+    -webkit-transform: scale(1.05);
+    z-index: 3;
 }
 
 /* 视频特殊样式 */
 .video-slide {
     object-fit: contain;
+    z-index: 2;
 }
 
 /* 进度条 */
@@ -136,8 +154,8 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 3px;
-    background: rgba(255,255,255,0.1);
+    height: 4px; /* 稍微加粗 */
+    background: rgba(255,255,255,0.2);
     z-index: 100;
 }
 
@@ -146,21 +164,52 @@ body {
     background: var(--accent-color);
     width: 0%;
     transition: width 0.3s linear;
+    box-shadow: 0 0 10px var(--accent-color); /* 增加发光效果 */
 }
 
-/* 字幕层 */
+/* 字幕层 - 艺术字优化 */
 .caption-layer {
     position: absolute;
-    bottom: 50px;
-    left: 50px;
-    z-index: 10;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    bottom: 8%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    z-index: 50;
+    pointer-events: none;
+    padding: 0 20px;
 }
 
 #caption-text {
     font-family: var(--font-art);
-    font-size: 1.8rem;
-    color: rgba(255,255,255,0.9);
+    font-size: 2.2rem;
+    color: rgba(255,255,255,0.95);
+    text-shadow: 2px 2px 15px rgba(0,0,0,0.8);
+    letter-spacing: 2px;
+    display: inline-block;
+    position: relative;
+    /* 增加类似电影字幕的淡入上浮动画 */
+    transition: opacity 1s ease, transform 1s ease;
+}
+
+/* 移动端专属优化 */
+@media (max-width: 768px) {
+    .welcome-title { font-size: 3rem; }
+    .welcome-subtitle { font-size: 1.2rem; margin-bottom: 2rem; }
+    .enter-btn { padding: 0.8rem 2.5rem; font-size: 1rem; }
+    
+    /* 手机端字幕调整 */
+    .caption-layer { bottom: 15%; }
+    #caption-text { 
+        font-size: 1.8rem; 
+        line-height: 1.4;
+        text-shadow: 1px 1px 10px rgba(0,0,0,0.9);
+    }
+    
+    /* 手机端图片显示优化 */
+    .slide-item {
+        /* 手机端可以尝试稍微撑满一点，或者保持 contain 配合模糊背景已经很好看了 */
+        object-fit: contain; 
+    }
 }
 
 /* Ending Screen */
