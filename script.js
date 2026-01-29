@@ -263,42 +263,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 烟花弹类 (负责升空)
         class Firework {
-            constructor(tx, ty, isBig = false) {
-                this.x = width / 2; // 默认发射点：底部中心
-                
-                // 如果是小烟花，发射点随机一点
-                if (!isBig) {
-                    this.x = random(width * 0.1, width * 0.9);
-                }
-                
-                this.y = height; // 从屏幕底部发出
-                this.sx = this.x;
+            constructor(startX, tx, ty) {
+                this.x = startX;
+                this.y = height;
+                this.sx = startX;
                 this.sy = height;
-                this.tx = tx; // 目标位置 x
-                this.ty = ty; // 目标位置 y
+                this.tx = tx;
+                this.ty = ty;
                 
-                this.distanceToTarget = Math.sqrt(Math.pow(tx - this.x, 2) + Math.pow(ty - this.y, 2));
+                this.distanceToTarget = Math.sqrt(Math.pow(tx - startX, 2) + Math.pow(ty - this.y, 2));
                 this.distanceTraveled = 0;
                 
-                // 轨迹坐标集合 (用于画拖尾)
                 this.coordinates = [];
                 this.coordinateCount = 3;
                 while(this.coordinateCount--) {
                     this.coordinates.push([this.x, this.y]);
                 }
                 
-                this.angle = Math.atan2(ty - height, tx - this.x);
-                this.speed = 2; // 初始速度
-                this.acceleration = 1.05; // 加速度
-                this.brightness = random(50, 80);
-                this.isBig = isBig;
+                this.angle = Math.atan2(ty - height, tx - startX);
+                // 随机升空参数，让节奏更自然
+                this.speed = random(2, 3.5); 
+                this.acceleration = random(1.03, 1.06); 
+                this.brightness = random(50, 70); // 稍微深一点的金色
             }
 
             update(index) {
                 this.coordinates.pop();
                 this.coordinates.unshift([this.x, this.y]);
                 
-                // 模拟加速升空
                 this.speed *= this.acceleration;
                 
                 const vx = Math.cos(this.angle) * this.speed;
@@ -306,9 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 this.distanceTraveled = Math.sqrt(Math.pow(this.sx - this.x - vx, 2) + Math.pow(this.sy - this.y - vy, 2));
                 
-                // 到达目标点，引爆
                 if(this.distanceTraveled >= this.distanceToTarget) {
-                    createParticles(this.tx, this.ty, this.isBig);
+                    createParticles(this.tx, this.ty);
                     fireworks.splice(index, 1);
                 } else {
                     this.x += vx;
@@ -318,43 +309,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
             draw() {
                 ctx.beginPath();
-                // 画出流星拖尾
                 ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
                 ctx.lineTo(this.x, this.y);
-                ctx.strokeStyle = 'hsl(45, 100%, ' + this.brightness + '%)'; // 金色
-                ctx.lineWidth = this.isBig ? 2 : 1;
+                ctx.strokeStyle = 'hsl(45, 100%, ' + this.brightness + '%)';
+                ctx.lineWidth = 2;
                 ctx.stroke();
             }
         }
 
         // 爆炸粒子类
         class Particle {
-            constructor(x, y, isBig) {
+            constructor(x, y) {
                 this.x = x;
                 this.y = y;
                 this.coordinates = [];
-                this.coordinateCount = 5;
+                this.coordinateCount = random(5, 10); // 拖尾长度随机
                 while(this.coordinateCount--) {
                     this.coordinates.push([this.x, this.y]);
                 }
                 
-                // 随机爆炸方向
                 this.angle = random(0, Math.PI * 2);
-                this.speed = random(1, 10);
+                this.speed = random(2, 18); // 爆炸范围随机性更大
                 
-                this.friction = 0.95; // 摩擦力
-                this.gravity = 1; // 重力
+                // 物理特性随机化
+                this.friction = random(0.92, 0.97); // 有的飞得远，有的飞得近
+                this.gravity = random(0.05, 0.2);   // 有的下坠快，有的悬浮久
                 
-                // 金色系配色 (40-50是金色/橙色区间)
                 this.hue = random(40, 50); 
                 this.brightness = random(50, 80);
                 this.alpha = 1;
-                this.decay = random(0.015, 0.03); // 消失速度
+                this.decay = random(0.005, 0.02); // 消失时间随机
                 
-                if (isBig) {
-                    this.speed = random(5, 15); // 大烟花炸得更开
-                    this.decay = random(0.01, 0.02); // 消失得更慢
-                }
+                // 闪烁效果
+                this.flicker = Math.random() > 0.5;
             }
 
             update(index) {
@@ -367,6 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 this.alpha -= this.decay;
                 
+                // 闪烁逻辑
+                if (this.flicker) {
+                    this.brightness = random(50, 100);
+                }
+                
                 if(this.alpha <= this.decay) {
                     particles.splice(index, 1);
                 }
@@ -376,16 +368,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.beginPath();
                 ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
                 ctx.lineTo(this.x, this.y);
-                // 金色光效
                 ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
+                ctx.lineWidth = Math.random() > 0.5 ? 2 : 1; // 随机粗细
                 ctx.stroke();
             }
         }
 
-        function createParticles(x, y, isBig) {
-            let particleCount = isBig ? 150 : 50; // 粒子数量
+        function createParticles(x, y) {
+            let particleCount = 120; // 增加粒子密度
             while(particleCount--) {
-                particles.push(new Particle(x, y, isBig));
+                particles.push(new Particle(x, y));
             }
         }
 
@@ -393,9 +385,9 @@ document.addEventListener('DOMContentLoaded', () => {
         function loop() {
             requestAnimationFrame(loop);
             
-            // 制造拖尾效果 (用半透明黑色覆盖)
+            // 拖尾残留调整，0.2让拖尾更长更明显
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
             ctx.fillRect(0, 0, width, height);
             ctx.globalCompositeOperation = 'lighter';
             
@@ -417,24 +409,35 @@ document.addEventListener('DOMContentLoaded', () => {
         // 逻辑：阶段一 - 盛大开场 (5个大烟花)
         let bigFireworksCount = 0;
         const bigInterval = setInterval(() => {
-            // 目标：屏幕中心区域
-            const targetX = width / 2 + random(-100, 100);
-            const targetY = height * 0.3 + random(-50, 50);
-            fireworks.push(new Firework(targetX, targetY, true));
+            // 目标：屏幕上方区域随机
+            const targetX = width / 2 + random(-300, 300);
+            const targetY = height * 0.2 + random(-100, 150);
+            
+            // 发射点控制
+            let startX;
+            if (bigFireworksCount === 0) {
+                // 第一个：绝对居中发射
+                startX = width / 2;
+            } else {
+                // 后续：随机位置发射
+                startX = random(width * 0.2, width * 0.8);
+            }
+
+            fireworks.push(new Firework(startX, targetX, targetY));
             
             bigFireworksCount++;
             if (bigFireworksCount >= 5) clearInterval(bigInterval);
-        }, 1200); // 发射间隔
+        }, 1500); // 间隔拉长，给每个烟花表现机会
 
-        // 逻辑：阶段二 - 零散背景 (稀疏)
+        // 逻辑：阶段二 - 零散背景
         setInterval(() => {
-            // 降低频率，只要一点点氛围
-            if (Math.random() > 0.7) { 
+            if (Math.random() > 0.8) { // 降低频率
+                const startX = random(width * 0.1, width * 0.9);
                 const targetX = random(width * 0.1, width * 0.9);
-                const targetY = random(height * 0.1, height * 0.6);
-                fireworks.push(new Firework(targetX, targetY, false));
+                const targetY = random(height * 0.1, height * 0.5);
+                fireworks.push(new Firework(startX, targetX, targetY));
             }
-        }, 1500);
+        }, 2000);
     }
 
     // 辅助：音乐淡入
