@@ -405,6 +405,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }, 1200); // 频率提高50% (原 1800ms -> 1200ms)
         }
+        // 3. 交互式烟花 (点击哪里炸哪里)
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            // 计算点击位置相对于 Canvas 的坐标，并考虑缩放
+            const x = (e.clientX - rect.left);
+            const y = (e.clientY - rect.top);
+            
+            // 从底部随机位置发射，飞向点击点
+            const startX = random(width * 0.2, width * 0.8);
+            const color = colors[Math.floor(random(0, colors.length))];
+            
+            // 交互产生的烟花，稍微大一点，颜色随机
+            createFirework(startX, x, y, color, false);
+        });
+
+        // 手机端触摸支持
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 防止触发点击
+            const rect = canvas.getBoundingClientRect();
+            
+            // 支持多点触控，每个手指都能触发
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const x = (touch.clientX - rect.left);
+                const y = (touch.clientY - rect.top);
+                
+                const startX = random(width * 0.2, width * 0.8);
+                const color = colors[Math.floor(random(0, colors.length))];
+                createFirework(startX, x, y, color, false);
+            }
+        }, { passive: false });
     }
 
     // --- Audio Helpers ---
