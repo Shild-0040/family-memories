@@ -480,9 +480,13 @@ document.addEventListener('DOMContentLoaded', () => {
             createFirework(startX, x, y, color, false);
         });
 
-        // 手机端触摸支持
+        // 手机端触摸支持 (修复：确保 Canvas 能接收到触摸事件)
         canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 防止触发点击
+            // 关键：阻止默认行为，防止滚动和缩放，确保触摸事件被 Canvas 捕获
+            if (e.cancelable) {
+               e.preventDefault(); 
+            }
+            
             const rect = canvas.getBoundingClientRect();
             
             // 支持多点触控，每个手指都能触发
@@ -495,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const color = colors[Math.floor(random(0, colors.length))];
                 createFirework(startX, x, y, color, false);
             }
-        }, { passive: false });
+        }, { passive: false }); // 关键：设置为非被动监听器，允许 preventDefault
     }
 
     // --- Audio Helpers ---
