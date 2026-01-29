@@ -1,17 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- UA Check for QQ/WeChat ---
-    const ua = navigator.userAgent.toLowerCase();
-    const isWeChat = /micromessenger/.test(ua);
-    // 关键修正：只拦截 QQ App 内置浏览器 (包含 "qq/")
-    // 移除对 "mqqbrowser" 的检测，因为 QQ 浏览器 App 的 UA 也包含它，导致跳转后依然被拦截
-    // 同时显式放行百度浏览器 (baidu)
-    const isQQApp = /qq\//.test(ua); 
-    
-    if (isWeChat || isQQApp) {
-        const guide = document.getElementById('wx-guide');
-        if (guide) guide.style.display = 'block';
-    }
-
     // --- DOM Elements ---
     const enterBtn = document.getElementById('enter-btn');
     // JS 双重保险：强制显示按钮，防止 CSS 动画失效
