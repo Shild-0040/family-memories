@@ -26,17 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndex = 0;
     let slideInterval;
 
-    // --- 1. Smart Preloader (Hybrid Mode) ---
-    // 策略：首屏优先。只要加载完前 5 张图 + 音乐，就允许进入。
-    // 剩下的图片在进入后，通过后台静默加载。
-    // 既保证了开场不黑屏，又不用让用户等所有图都下完。
+    // --- 1. Ultra-Light Preloader (On-Demand Mode) ---
+    // 策略：针对百度/低端浏览器，放弃所有预加载，只加载当前和下一张。
+    // 内存占用最小化，并发连接数最小化。
     
     let loadedCount = 0;
     let isEnterEnabled = false;
     const assetsToLoad = [];
-    const CRITICAL_COUNT = 5; // 关键资源数量：前5张
+    const CRITICAL_COUNT = 3; // 仅预加载前3张 (配合 HTML 的 src 直连)
 
-    // 1. 收集资源
+    // 1. 收集资源 (仅用于计数，不再用于预加载)
     slides.forEach((slide, index) => {
         const src = slide.getAttribute('data-src') || slide.src;
         if (!src) return;
@@ -46,16 +45,16 @@ document.addEventListener('DOMContentLoaded', () => {
             src: src,
             type: slide.tagName,
             index: index,
-            isCritical: index < CRITICAL_COUNT // 标记是否为关键资源
+            isCritical: index < CRITICAL_COUNT
         });
     });
 
-    // 计算关键资源总数 (前5张 + 音乐)
+    // 计算关键资源总数
     const criticalTotal = Math.min(assetsToLoad.length, CRITICAL_COUNT) + 1;
 
     // 更新加载进度
     function updateProgress(isCriticalAsset) {
-        if (isEnterEnabled) return; // 如果已经开启，就不管了
+        if (isEnterEnabled) return; 
 
         if (isCriticalAsset) {
             loadedCount++;
@@ -64,8 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (loadedCount >= criticalTotal) {
                 enableEnterButton();
-                // 关键资源加载完后，开始加载剩余资源
-                loadRemainingAssets();
+                // 注意：这里不再调用 loadRemainingAssets()，改为按需加载
             }
         }
     }
@@ -100,29 +98,39 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 3. 加载关键视觉资源 (立即执行)
+    // 3. 仅加载前 3 张 (关键资源)
     assetsToLoad.forEach(asset => {
         if (asset.isCritical) {
             loadSingleAsset(asset, true);
         }
     });
 
-    // 4. 加载剩余资源 (后台执行)
-    function loadRemainingAssets() {
-        console.log('Loading remaining assets in background...');
-        assetsToLoad.forEach(asset => {
-            if (!asset.isCritical) {
-                // 稍微错峰加载，避免瞬间卡顿
-                setTimeout(() => {
-                    loadSingleAsset(asset, false);
-                }, 200 * (asset.index - CRITICAL_COUNT));
+    // 4. 按需加载器 (On-Demand Loader)
+    // 当切换到第 N 张时，才去加载第 N+1 张
+    function preloadNext(currentIndex) {
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < assetsToLoad.length) {
+            const nextAsset = assetsToLoad[nextIndex];
+            // 只有还没加载过才加载
+            if (!nextAsset.element.dataset.loaded) {
+                console.log(`Preloading next asset: ${nextIndex}`);
+                loadSingleAsset(nextAsset, false);
             }
-        });
+        }
+        
+        // 顺便预加载下下张，保证平滑
+        const nextNextIndex = currentIndex + 2;
+        if (nextNextIndex < assetsToLoad.length) {
+            const nnAsset = assetsToLoad[nextNextIndex];
+            if (!nnAsset.element.dataset.loaded) {
+                 setTimeout(() => loadSingleAsset(nnAsset, false), 500); // 错峰加载
+            }
+        }
     }
 
     // 通用加载函数
     function loadSingleAsset(asset, isCritical) {
-        if (asset.element.dataset.loaded) return; // 防止重复加载
+        if (asset.element.dataset.loaded) return; 
 
         if (asset.type === 'IMG') {
             const img = new Image();
@@ -131,9 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 asset.element.src = asset.src;
                 asset.element.removeAttribute('data-src');
                 asset.element.dataset.loaded = "true";
-                // 强制重绘，解决某些浏览器（如 Safari）虽然设置了 src 但不显示的 bug
+                // 强制重绘
                 asset.element.style.display = 'none';
-                asset.element.offsetHeight; // 触发 reflow
+                asset.element.offsetHeight; 
                 asset.element.style.display = 'block';
                 
                 if (isCritical) updateProgress(true);
@@ -141,29 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             img.onload = handleImageLoad;
             
-            // 移除 decode()，因为部分老旧或国产浏览器可能实现有问题导致 Promise 挂起
-            /*
-            img.onload = () => {
-                if ('decode' in img) {
-                    img.decode().then(handleImageLoad).catch(handleImageLoad);
-                } else {
-                    handleImageLoad();
-                }
-            };
-            */
-            
             img.onerror = () => {
                 console.warn(`Image load failed: ${asset.src}`);
-                // 加载失败也要标记为完成，防止卡在 99%
                 if (isCritical) updateProgress(true);
             };
             img.src = asset.src;
         } else if (asset.type === 'VIDEO') {
             asset.element.src = asset.src;
             asset.element.removeAttribute('data-src');
-            // 关键视频用 auto，后台视频用 metadata 省流量
+            // 视频预加载策略：非关键视频只加载 metadata
             asset.element.preload = isCritical ? 'auto' : 'metadata'; 
-            asset.element.load();
+            // asset.element.load(); // 暂时不调用 load()，防止抢占带宽，等轮到了再 load
             
             const onVideoLoaded = () => {
                 if (!asset.element.dataset.loaded) {
@@ -180,6 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (isCritical) updateProgress(true);
                 }
             };
+            
+            // 关键视频手动触发 load
+            if (isCritical) asset.element.load();
         }
     }
 

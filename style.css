@@ -21,6 +21,10 @@ body, html {
     width: 100%;
     /* 核心修改：锁定高度，防止地址栏伸缩导致页面跳动 */
     height: 100%; 
+    /* 百度浏览器防抖动终极方案：强制 fixed */
+    position: fixed;
+    top: 0;
+    left: 0;
     overflow: hidden;
     background-color: var(--bg-color);
     font-family: var(--font-heading);
