@@ -212,7 +212,7 @@ body, html {
 
 /* 视频特殊样式 */
 .video-slide {
-    object-fit: cover !important; /* 强制铺满全屏，裁剪多余部分 */
+    object-fit: contain !important; /* 改回 contain，确保完整显示 */
     width: 100% !important;
     height: 100% !important;
     z-index: 2;

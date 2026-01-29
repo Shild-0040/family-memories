@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
         video.setAttribute('webkit-playsinline', '');
         video.setAttribute('x5-playsinline', '');
         
-        // 健壮的播放逻辑：尝试有声播放 -> 失败则静音播放
+        // 健壮的播放逻辑
         const playPromise = video.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
@@ -300,32 +300,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const triggerEnd = () => {
             if (isEnded) return;
             isEnded = true;
+            console.log('Video ended. Triggering slideshow end.');
             endSlideshow();
         };
 
         video.onended = triggerEnd;
         
-        // 兜底机制：有些浏览器 onended 不准，用 timeupdate 辅助
+        // 兜底机制 1：timeupdate
         video.ontimeupdate = () => {
-            // 关键修复：确保 duration 是有效数字，且视频确实播放了一段时间 (比如 > 1秒)
-            // 防止刚开始加载时 duration 可能为 NaN 或很小，导致误判
             if (video.duration && !isNaN(video.duration) && video.duration > 1) {
-                // 只有当播放进度真的接近尾声时才触发
                 if (video.currentTime >= video.duration - 0.5) {
                     triggerEnd();
                 }
             }
         };
+
+        // 兜底机制 2：绝对定时器 (终极保险)
+        // 如果能获取到时长，设置一个定时器强制结束
+        if (video.duration && !isNaN(video.duration) && video.duration !== Infinity) {
+            const timeoutMs = (video.duration * 1000) + 1000; // 视频时长 + 1秒冗余
+            console.log(`Setting safety timeout: ${timeoutMs}ms`);
+            setTimeout(triggerEnd, timeoutMs);
+        } else {
+            // 如果一开始没获取到，等 metadata 加载完了再设
+            video.onloadedmetadata = () => {
+                if (video.duration && !isNaN(video.duration) && video.duration !== Infinity) {
+                    const timeoutMs = (video.duration * 1000) + 1000;
+                    console.log(`Setting safety timeout (delayed): ${timeoutMs}ms`);
+                    setTimeout(triggerEnd, timeoutMs);
+                }
+            };
+        }
     }
 
     function endSlideshow() {
-        // clearInterval(slideInterval);
-        
-        // 1. 停止视频（如果有）
+        // 1. 停止并销毁视频 (核心修复：彻底杀死原生播放器)
         slides.forEach(slide => {
             if (slide.tagName === 'VIDEO') {
-                slide.pause();
-                slide.currentTime = 0;
+                try {
+                    slide.pause();
+                    slide.src = ""; // 清空源
+                    slide.load();   // 重置
+                    slide.remove(); // 直接从 DOM 移除
+                } catch(e) {
+                    console.error('Error destroying video:', e);
+                }
             }
         });
 
@@ -335,13 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
         bgm.volume = 0;
         bgm.play().then(() => fadeInAudio(bgm, 0.5)).catch(console.error);
         
-        // 3. 界面切换 (强制隐藏幻灯片容器)
-        // 使用 display: none 确保彻底消失，不挡在上面
+        // 3. 界面切换 (立即隐藏，不要等待动画)
+        // 这里的优先级最高，防止被卡住
+        slideshowContainer.style.display = 'none'; 
         slideshowContainer.style.opacity = 0;
         slideshowContainer.style.pointerEvents = 'none';
-        setTimeout(() => {
-            slideshowContainer.style.display = 'none'; // 彻底移除
-        }, 1000); // 等 opacity 动画播完
 
         endingScreen.classList.add('visible');
         
