@@ -187,22 +187,78 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeFireworks = [];
         const activeParticles = [];
 
-        // Audio Pool System
-        const soundPool = Array.from(document.querySelectorAll('.firework-sound'));
-        let soundIndex = 0;
+        // Web Audio API Context
+        let audioCtx;
+        
+        // 初始化音频上下文 (必须在用户交互中触发)
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+        
+        // 尝试在开始时就初始化 (虽然可能被拦截，但值得一试)
+        try { initAudio(); } catch(e) {}
+        
+        // 在任何可能的点击中再次尝试唤醒
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
 
-        function playFireworkSound() {
-            // 简单的轮询播放，防止并发限制
-            const sound = soundPool[soundIndex];
-            if (sound) {
-                sound.currentTime = 0;
-                // 随机音调，让声音不单调
-                sound.playbackRate = 0.8 + Math.random() * 0.4;
-                // 随机音量，大烟花更响
-                sound.volume = 0.3 + Math.random() * 0.3;
-                sound.play().catch(() => {}); // 忽略自动播放限制错误
+        // 合成爆炸音效 (无需加载文件)
+        function playExplosionSound(isBig) {
+            if (!audioCtx) return;
+            
+            const t = audioCtx.currentTime;
+            
+            // 1. 核心爆炸声 (白噪音)
+            const bufferSize = audioCtx.sampleRate * 2; // 2秒缓冲
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            
+            // 滤波器 (模拟沉闷感)
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = isBig ? 400 : 800; // 大烟花更低沉
+            
+            // 包络 (Attack & Decay)
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(isBig ? 0.8 : 0.3, t + 0.05); // 瞬间响度
+            gain.gain.exponentialRampToValueAtTime(0.01, t + (isBig ? 1.5 : 0.8)); // 衰减
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            noise.start(t);
+            noise.stop(t + 2);
+            
+            // 2. 尖啸声 (可选，增加层次)
+            if (Math.random() > 0.5) {
+                const osc = audioCtx.createOscillator();
+                const oscGain = audioCtx.createGain();
                 
-                soundIndex = (soundIndex + 1) % soundPool.length;
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(random(200, 400), t);
+                osc.frequency.exponentialRampToValueAtTime(50, t + 0.5);
+                
+                oscGain.gain.setValueAtTime(0.1, t);
+                oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                
+                osc.connect(oscGain);
+                oscGain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + 0.5);
             }
         }
 
@@ -272,8 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (this.distanceTraveled >= this.distanceToTarget) {
                     createParticles(this.tx, this.ty, this.color, this.isMain);
-                    // 爆炸时播放音效
-                    playFireworkSound();
+                    // 爆炸时播放音效 (合成版)
+                    playExplosionSound(this.isMain);
                     
                     this.active = false;
                     // Return to pool
