@@ -72,6 +72,7 @@ body, html {
 }
 
 .enter-btn {
+    display: inline-block; /* 强制显示 */
     padding: 1rem 3rem;
     font-size: 1.2rem;
     background: transparent;
@@ -81,13 +82,16 @@ body, html {
     position: relative;
     overflow: hidden;
     transition: all 0.5s ease;
-    opacity: 0;
-    /* 缩短延迟：从 2.5s 改为 0.5s，让进度条尽快显示 */
+    
+    /* 核心修复：手机端可能不支持 forward fill mode 导致 opacity 保持为 0 */
+    opacity: 0; 
     animation: fadeIn 1s ease-out 0.5s forwards;
+    
     /* 增大点击热区 */
     min-width: 180px; 
     min-height: 50px;
     touch-action: manipulation; /* 优化点击延迟 */
+    z-index: 1001; /* 确保在最上层 */
 }
 
 .enter-btn:hover, .enter-btn:active { /* 增加 active 态适配触摸 */
