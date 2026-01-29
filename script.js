@@ -131,9 +131,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 asset.element.src = asset.src;
                 asset.element.removeAttribute('data-src');
                 asset.element.dataset.loaded = "true";
+                // 强制重绘，解决某些浏览器（如 Safari）虽然设置了 src 但不显示的 bug
+                asset.element.style.display = 'none';
+                asset.element.offsetHeight; // 触发 reflow
+                asset.element.style.display = 'block';
+                
                 if (isCritical) updateProgress(true);
             };
 
+            img.onload = handleImageLoad;
+            
+            // 移除 decode()，因为部分老旧或国产浏览器可能实现有问题导致 Promise 挂起
+            /*
             img.onload = () => {
                 if ('decode' in img) {
                     img.decode().then(handleImageLoad).catch(handleImageLoad);
@@ -141,9 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     handleImageLoad();
                 }
             };
+            */
             
             img.onerror = () => {
                 console.warn(`Image load failed: ${asset.src}`);
+                // 加载失败也要标记为完成，防止卡在 99%
                 if (isCritical) updateProgress(true);
             };
             img.src = asset.src;
