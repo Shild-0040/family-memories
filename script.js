@@ -480,25 +480,30 @@ document.addEventListener('DOMContentLoaded', () => {
             createFirework(startX, x, y, color, false);
         });
 
-        // 手机端触摸支持 (修复：确保 Canvas 能接收到触摸事件)
+        // 手机端触摸支持 (修复：确保 Canvas 能接收到触摸事件，并添加节流优化)
+        let isTouching = false;
         canvas.addEventListener('touchstart', (e) => {
-            // 关键：阻止默认行为，防止滚动和缩放，确保触摸事件被 Canvas 捕获
             if (e.cancelable) {
                e.preventDefault(); 
             }
             
-            const rect = canvas.getBoundingClientRect();
+            if (isTouching) return;
+            isTouching = true;
             
-            // 支持多点触控，每个手指都能触发
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                const x = (touch.clientX - rect.left);
-                const y = (touch.clientY - rect.top);
-                
-                const startX = random(width * 0.2, width * 0.8);
-                const color = colors[Math.floor(random(0, colors.length))];
-                createFirework(startX, x, y, color, false);
-            }
+            requestAnimationFrame(() => {
+                const rect = canvas.getBoundingClientRect();
+                // 支持多点触控，每个手指都能触发
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    const x = (touch.clientX - rect.left);
+                    const y = (touch.clientY - rect.top);
+                    
+                    const startX = random(width * 0.2, width * 0.8);
+                    const color = colors[Math.floor(random(0, colors.length))];
+                    createFirework(startX, x, y, color, false);
+                }
+                isTouching = false;
+            });
         }, { passive: false }); // 关键：设置为非被动监听器，允许 preventDefault
     }
 

@@ -118,6 +118,9 @@ body, html {
     overflow: hidden;
     opacity: 0;
     transition: opacity 2s ease-in-out;
+    /* 性能优化：隔离重绘区域 */
+    contain: layout style paint;
+    will-change: opacity;
 }
 
 #slideshow-container.visible {
