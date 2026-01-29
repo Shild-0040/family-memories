@@ -1,0 +1,171 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const enterBtn = document.getElementById('enter-btn');
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const slideshowContainer = document.getElementById('slideshow-container');
+    const slides = document.querySelectorAll('.slide-item');
+    const bgm = document.getElementById('bgm');
+    const progressBar = document.querySelector('.progress-fill');
+    const endingScreen = document.getElementById('ending-screen');
+    
+    let currentIndex = 0;
+    let slideInterval;
+    const SLIDE_DURATION = 5000; // 每张图片停留5秒
+
+    // 随机文案库
+    const captions = [
+        "时光荏苒 · 岁月静好",
+        "记忆中的微光",
+        "这一刻，即是永恒",
+        "陪伴是最长情的告白",
+        "温暖的瞬间",
+        "爱在日常",
+        "未完待续的故事..."
+    ];
+
+    // 1. 开始按钮点击事件
+    enterBtn.addEventListener('click', () => {
+        // 淡入音乐
+        bgm.volume = 0;
+        bgm.play().then(() => {
+            fadeInAudio(bgm, 0.6); // 目标音量 0.6
+        }).catch(e => console.log(e));
+
+        // 隐藏欢迎页
+        welcomeScreen.classList.add('hidden');
+        
+        // 显示幻灯片容器
+        setTimeout(() => {
+            welcomeScreen.style.display = 'none';
+            slideshowContainer.classList.add('visible');
+            startSlideshow();
+        }, 1500);
+    });
+
+    // 2. 幻灯片核心逻辑
+    function startSlideshow() {
+        // 初始化第一张
+        showSlide(0);
+
+        // 设置定时器
+        slideInterval = setInterval(nextSlide, SLIDE_DURATION);
+    }
+
+    function showSlide(index) {
+        // 移除所有激活状态
+        slides.forEach(slide => slide.classList.remove('active'));
+        
+        // 激活当前张
+        const currentSlide = slides[index];
+        currentSlide.classList.add('active');
+
+        // 更新文案 (每3张换一次文案)
+        if (index % 3 === 0) {
+            const captionEl = document.getElementById('caption-text');
+            captionEl.style.opacity = 0;
+            setTimeout(() => {
+                captionEl.textContent = captions[Math.floor(Math.random() * captions.length)];
+                captionEl.style.opacity = 1;
+            }, 1000);
+        }
+
+        // 更新进度条
+        const progress = ((index + 1) / slides.length) * 100;
+        progressBar.style.width = `${progress}%`;
+
+        // 特殊处理：如果是视频
+        if (currentSlide.tagName === 'VIDEO') {
+            handleVideoSlide(currentSlide);
+        }
+    }
+
+    function nextSlide() {
+        currentIndex++;
+        
+        // 检查是否结束
+        if (currentIndex >= slides.length) {
+            endSlideshow();
+            return;
+        }
+
+        showSlide(currentIndex);
+    }
+
+    // 3. 视频播放处理
+    function handleVideoSlide(video) {
+        clearInterval(slideInterval); // 暂停自动轮播
+        
+        // 音乐淡出
+        fadeOutAudio(bgm, () => {
+            bgm.pause();
+        });
+
+        // 播放视频
+        video.currentTime = 0;
+        video.muted = false; // 开启视频声音
+        video.play();
+
+        // 视频结束后
+        video.onended = () => {
+            // 视频是最后一个，直接结束
+            endSlideshow(); 
+        };
+    }
+
+    // 4. 结束逻辑
+    function endSlideshow() {
+        clearInterval(slideInterval);
+        
+        // 如果最后不是视频（或者有其他情况），确保音乐淡出
+        if (!bgm.paused) {
+            fadeOutAudio(bgm, () => bgm.pause());
+        }
+        
+        // 显示结尾页
+        slideshowContainer.style.opacity = 0;
+        endingScreen.classList.add('visible');
+        
+        // 逐行显示寄语
+        const lines = document.querySelectorAll('.ending-line');
+        lines.forEach((line, index) => {
+            setTimeout(() => {
+                line.style.animation = `slideUp 1.5s ease forwards`;
+            }, index * 1500); // 每句间隔1.5秒
+        });
+
+        // 显示重温按钮
+        setTimeout(() => {
+            document.querySelector('.restart-btn').style.opacity = 1;
+        }, lines.length * 1500 + 1000);
+    }
+
+    // 辅助：音乐淡入
+    function fadeInAudio(audio, targetVolume) {
+        const step = 0.05;
+        const interval = 200; // 每200ms增加音量
+        
+        const fade = setInterval(() => {
+            if (audio.volume < targetVolume - step) {
+                audio.volume += step;
+            } else {
+                audio.volume = targetVolume;
+                clearInterval(fade);
+            }
+        }, interval);
+    }
+
+    // 辅助：音乐淡出
+    function fadeOutAudio(audio, callback) {
+        const step = 0.05;
+        const interval = 200;
+        
+        const fade = setInterval(() => {
+            if (audio.volume > step) {
+                audio.volume -= step;
+            } else {
+                audio.volume = 0;
+                clearInterval(fade);
+                if (callback) callback();
+            }
+        }, interval);
+    }
+});

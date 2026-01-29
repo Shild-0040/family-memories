@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>我们的时光 | Family Memories</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 欢迎页 (遮罩层) -->
+    <div id="welcome-screen">
+        <div class="welcome-content">
+            <h1 class="welcome-title">家 · 时光</h1>
+            <p class="welcome-subtitle">爱是记忆的永恒</p>
+            <button id="enter-btn" class="enter-btn">
+                <span class="btn-text">开启回忆录</span>
+                <span class="btn-line"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 音乐播放器 (隐藏) -->
+    <audio id="bgm" loop>
+        <source src="bgm.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- 幻灯片容器 -->
+    <div id="slideshow-container" class="hidden">
+        <!-- 进度条 -->
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+
+        <!-- 图片/视频列表 (JS动态控制显示) -->
+        <div class="slide-wrapper">
+            <!-- 重新扫描后的图片列表 -->
+            <img src="image/1769655347454.jpg" class="slide-item active" alt="Memory">
+            <img src="image/1769655416571.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544496.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544503.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544510.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544518.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544529.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544541.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544554.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544563.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544571.jpg" class="slide-item" alt="Memory">
+            <img src="image/1769655544585.jpg" class="slide-item" alt="Memory">
+            <img src="image/IMG_20250216_215641.jpg" class="slide-item" alt="Memory">
+            <img src="image/Image_410523003334853.jpg" class="slide-item" alt="Memory">
+            <img src="image/Image_411045321207807.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713862119.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713866041.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713868688.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713872473.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713874579.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713876468.jpg" class="slide-item" alt="Memory">
+            <img src="image/mmexport1739713880658.jpg" class="slide-item" alt="Memory">
+            
+            <!-- 视频放在最后 -->
+            <video src="image/mmexport1739713864019.mp4" class="slide-item video-slide" muted playsinline></video>
+        </div>
+
+        <!-- 装饰性文字层 -->
+        <div class="caption-layer">
+            <p id="caption-text">时光荏苒 · 岁月静好</p>
+        </div>
+    </div>
+
+    <!-- 结尾寄语页 -->
+    <div id="ending-screen" class="hidden">
+        <div class="ending-content">
+            <p class="ending-line">每一次快门</p>
+            <p class="ending-line">都是对时间的挽留</p>
+            <p class="ending-line">愿我们</p>
+            <p class="ending-line highlight">岁岁常相见</p>
+            <div class="restart-btn" onclick="location.reload()">
+                <i class="fas fa-redo"></i> 重温
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
