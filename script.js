@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
     const enterBtn = document.getElementById('enter-btn');
     const welcomeScreen = document.getElementById('welcome-screen');
     const slideshowContainer = document.getElementById('slideshow-container');
@@ -7,114 +8,106 @@ document.addEventListener('DOMContentLoaded', () => {
     const bgm = document.getElementById('bgm');
     const progressBar = document.querySelector('.progress-fill');
     const endingScreen = document.getElementById('ending-screen');
-    
+    const btnText = enterBtn.querySelector('.btn-text');
+
+    // --- Configuration ---
+    const SLIDE_DURATION = 5000;
+    const IS_MOBILE = window.innerWidth < 768;
+    const PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, 2);
+
+    // --- State ---
     let currentIndex = 0;
     let slideInterval;
-    const SLIDE_DURATION = 5000; // 每张图片停留5秒
 
-    // 智能预加载函数
-    function preloadNextImage(index) {
-        // 预加载下两张
-        for (let i = 1; i <= 2; i++) {
-            const nextIndex = (index + i) % slides.length;
-            const nextSlide = slides[nextIndex];
-            
-            if (nextSlide.tagName === 'IMG' && nextSlide.hasAttribute('data-src')) {
-                nextSlide.src = nextSlide.getAttribute('data-src');
-                nextSlide.removeAttribute('data-src');
-            } else if (nextSlide.tagName === 'VIDEO' && nextSlide.hasAttribute('data-src')) {
-                // 视频在接近时才加载
-                if (i === 1) { 
-                    nextSlide.src = nextSlide.getAttribute('data-src');
-                    nextSlide.removeAttribute('data-src');
-                    nextSlide.load();
-                }
-            }
-        }
-    }
-
-    // 1. 资源预加载逻辑
-    const PRELOAD_COUNT = 5; // 增加预加载数量到5张，提升流畅度
-    let loadedCount = 0;
+    // --- 1. Extreme Preloader (Full Asset Loading) ---
+    const assetsToLoad = [];
     
-    // 初始状态：禁用按钮
-    enterBtn.style.opacity = '0.5';
-    enterBtn.style.pointerEvents = 'none';
-    const btnText = enterBtn.querySelector('.btn-text');
-    btnText.textContent = '资源加载中...';
-
-    // 预加载音频
-    bgm.load();
-    bgm.oncanplaythrough = checkLoadProgress;
-    bgm.onerror = checkLoadProgress; // 即使失败也算完成
-
-    // 容错机制：设置一个 8 秒的超时定时器
-    // 如果网络太慢导致资源一直在加载，8秒后强制显示开启按钮，不让用户干等
-    setTimeout(() => {
-        if (loadedCount < TOTAL_RESOURCES) {
-            console.log('Loading timed out, forcing start.');
-            // 强制设置为完成状态
-            loadedCount = TOTAL_RESOURCES;
-            checkLoadProgress();
-        }
-    }, 8000);
-
-    // 获取前几张图片/视频
-    const initialResources = Array.from(slides).slice(0, PRELOAD_COUNT);
-    
-    // 总共需要加载的资源数 = 图片数 + 音频
-    const TOTAL_RESOURCES = initialResources.length + 1;
-
-    initialResources.forEach(slide => {
-        const src = slide.getAttribute('src') || slide.getAttribute('data-src');
-        if (!src) {
-            checkLoadProgress();
-            return;
-        }
-
-        if (slide.tagName === 'IMG') {
-            const img = new Image();
-            img.src = src;
-            img.onload = checkLoadProgress;
-            img.onerror = checkLoadProgress; // 即使失败也继续，避免卡死
-        } else if (slide.tagName === 'VIDEO') {
-            const video = document.createElement('video');
-            video.src = src;
-            video.preload = 'metadata'; // 仅加载元数据，避免卡顿
-            video.onloadedmetadata = checkLoadProgress;
-            video.onerror = checkLoadProgress;
+    // Collect all images and videos
+    slides.forEach(slide => {
+        const src = slide.getAttribute('data-src') || slide.src;
+        if (src) {
+            assetsToLoad.push({
+                element: slide,
+                src: src,
+                type: slide.tagName
+            });
         }
     });
 
-    function checkLoadProgress() {
-        loadedCount++;
-        const percent = Math.floor((loadedCount / TOTAL_RESOURCES) * 100);
-        btnText.textContent = `资源加载中... ${Math.min(percent, 99)}%`; // 避免直接跳到100
+    let loadedCount = 0;
+    const totalAssets = assetsToLoad.length + 1; // +1 for audio
 
-        if (loadedCount >= TOTAL_RESOURCES) {
-            // 加载完成
-            btnText.textContent = '开启回忆录';
-            enterBtn.style.opacity = '1';
-            enterBtn.style.pointerEvents = 'auto';
-            enterBtn.classList.add('ready-pulse'); // 添加呼吸效果提示可点击
+    function updateProgress() {
+        loadedCount++;
+        const percent = Math.floor((loadedCount / totalAssets) * 100);
+        btnText.textContent = `资源加载中... ${Math.min(percent, 100)}%`;
+        
+        if (loadedCount >= totalAssets) {
+            enableEnterButton();
         }
     }
 
-    // 2. 开始按钮点击事件
+    function enableEnterButton() {
+        btnText.textContent = '开启回忆录';
+        enterBtn.style.opacity = '1';
+        enterBtn.style.pointerEvents = 'auto';
+        enterBtn.classList.add('ready-pulse');
+    }
+
+    // Load Audio
+    bgm.load();
+    bgm.oncanplaythrough = () => {
+        // Ensure this only counts once
+        if (!bgm.dataset.loaded) {
+            bgm.dataset.loaded = "true";
+            updateProgress();
+        }
+    };
+    bgm.onerror = () => {
+        if (!bgm.dataset.loaded) {
+            bgm.dataset.loaded = "true";
+            updateProgress(); // Count even if failed
+        }
+    };
+
+    // Load Visual Assets
+    assetsToLoad.forEach(asset => {
+        if (asset.type === 'IMG') {
+            const img = new Image();
+            img.onload = () => {
+                asset.element.src = asset.src;
+                asset.element.removeAttribute('data-src');
+                updateProgress();
+            };
+            img.onerror = updateProgress;
+            img.src = asset.src;
+        } else if (asset.type === 'VIDEO') {
+            asset.element.src = asset.src;
+            asset.element.removeAttribute('data-src');
+            asset.element.load();
+            asset.element.onloadedmetadata = updateProgress;
+            asset.element.onerror = updateProgress;
+        }
+    });
+
+    // Failsafe timeout (8 seconds)
+    setTimeout(() => {
+        if (loadedCount < totalAssets) {
+            console.warn('Loading timed out, forcing start.');
+            loadedCount = totalAssets;
+            enableEnterButton();
+        }
+    }, 8000);
+
+
+    // --- 2. Interaction & Slideshow ---
     enterBtn.addEventListener('click', () => {
-        // 立即开始预加载前几张
-        preloadNextImage(0);
-
-        // 淡入音乐
+        // Play Audio
         bgm.volume = 0;
-        bgm.play().then(() => {
-            fadeInAudio(bgm, 0.3); // 目标音量降低至 0.3 (30%)
-        }).catch(e => console.log(e));
+        bgm.play().then(() => fadeInAudio(bgm, 0.3)).catch(console.error);
 
-        // 隐藏欢迎页
+        // Transition
         welcomeScreen.classList.add('hidden');
-        
-        // 显示幻灯片容器
         setTimeout(() => {
             welcomeScreen.style.display = 'none';
             slideshowContainer.classList.add('visible');
@@ -122,142 +115,108 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1500);
     });
 
-    // 2. 幻灯片核心逻辑
     function startSlideshow() {
-        // 初始化第一张
         showSlide(0);
-
-        // 设置定时器
         slideInterval = setInterval(nextSlide, SLIDE_DURATION);
     }
 
-
+    function nextSlide() {
+        currentIndex++;
+        if (currentIndex >= slides.length) {
+            endSlideshow();
+            return;
+        }
+        showSlide(currentIndex);
+    }
 
     function showSlide(index) {
-        // 预加载后续图片
-        preloadNextImage(index);
-
-        // 移除所有激活状态
         slides.forEach(slide => slide.classList.remove('active'));
-        
-        // 激活当前张
         const currentSlide = slides[index];
-        
-        // 确保当前图片已加载 (如果还没被预加载)
-        if (currentSlide.tagName === 'IMG' && currentSlide.hasAttribute('data-src')) {
-            currentSlide.src = currentSlide.getAttribute('data-src');
-            currentSlide.removeAttribute('data-src');
-        }
-
         currentSlide.classList.add('active');
 
-        // 更新模糊背景 (同步显示当前图片/视频的截图)
+        // Update Background
         if (currentSlide.tagName === 'IMG') {
             slideBlurBg.style.backgroundImage = `url(${currentSlide.src})`;
-        } else if (currentSlide.tagName === 'VIDEO') {
-            // 视频的话，尝试用第一帧或者保持上一张图
-            // 简单起见，可以保持不动，或者如果有封面图可以使用封面
         }
 
-        // 更新进度条
+        // Progress Bar
         const progress = ((index + 1) / slides.length) * 100;
         progressBar.style.width = `${progress}%`;
 
-        // 特殊处理：如果是视频
+        // Handle Video
         if (currentSlide.tagName === 'VIDEO') {
             handleVideoSlide(currentSlide);
         }
     }
 
-    function nextSlide() {
-        currentIndex++;
-        
-        // 检查是否结束
-        if (currentIndex >= slides.length) {
-            endSlideshow();
-            return;
-        }
-
-        showSlide(currentIndex);
-    }
-
-    // 3. 视频播放处理
     function handleVideoSlide(video) {
-        clearInterval(slideInterval); // 暂停自动轮播
+        clearInterval(slideInterval);
+        fadeOutAudio(bgm, () => bgm.pause());
         
-        // 确保视频源已加载
-        if (video.hasAttribute('data-src')) {
-            video.src = video.getAttribute('data-src');
-            video.removeAttribute('data-src');
-        }
-
-        // 音乐淡出
-        fadeOutAudio(bgm, () => {
-            bgm.pause();
-        });
-
-        // 播放视频
         video.currentTime = 0;
-        video.muted = false; // 开启视频声音
-        video.play().catch(e => console.log("Video play failed:", e));
-
-        // 视频结束后
+        video.muted = false;
+        video.play().catch(console.error);
+        
         video.onended = () => {
-            // 视频是最后一个，直接结束
-            endSlideshow(); 
+            endSlideshow();
         };
     }
 
-    // 4. 结束逻辑
     function endSlideshow() {
         clearInterval(slideInterval);
+        if (!bgm.paused) fadeOutAudio(bgm, () => bgm.pause());
         
-        // 音乐淡出
-        if (!bgm.paused) {
-            fadeOutAudio(bgm, () => bgm.pause());
-        }
-        
-        // 显示结尾页
         slideshowContainer.style.opacity = 0;
         endingScreen.classList.add('visible');
         
-        // 启动烟花特效
         startFireworks();
-        // 字幕显示逻辑由 startFireworks 内部控制
     }
 
-    // 5. 烟花特效系统 (唯美慢动作版)
+    // --- 3. Optimized Fireworks System (Object Pooling) ---
     function startFireworks() {
         const canvas = document.getElementById('fireworks');
-        const ctx = canvas.getContext('2d');
-        let width, height;
-        let fireworks = []; // 升空的烟花弹
-        let particles = []; // 爆炸的火花
+        // Disable alpha for performance if possible, but we need trails so we keep it standard
+        // Actually alpha: false is for opaque canvas. We need transparent.
+        const ctx = canvas.getContext('2d', { alpha: true }); 
         
-        // 高级配色方案 (单色纯色)
-        const colors = [
-            'hsl(330, 80%, 75%)', // 柔粉
-            'hsl(45, 90%, 65%)',  // 鎏金
-            'hsl(190, 80%, 70%)', // 冰蓝
-            'hsl(260, 60%, 75%)', // 浅紫
-            'hsl(30, 90%, 70%)',  // 暖橙
-            'hsl(140, 60%, 70%)'  // 清绿
-        ];
+        let width, height;
+        
+        // Object Pools
+        const fireworkPool = [];
+        const particlePool = [];
+        const activeFireworks = [];
+        const activeParticles = [];
 
         function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * PIXEL_RATIO;
+            canvas.height = height * PIXEL_RATIO;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            ctx.scale(PIXEL_RATIO, PIXEL_RATIO);
         }
         window.addEventListener('resize', resize);
         resize();
 
-        function random(min, max) {
-            return Math.random() * (max - min) + min;
-        }
+        // Helpers
+        const random = (min, max) => Math.random() * (max - min) + min;
+        
+        // Colors
+        const colors = [
+            'hsl(330, 80%, 75%)', 'hsl(45, 90%, 65%)', 
+            'hsl(190, 80%, 70%)', 'hsl(260, 60%, 75%)', 
+            'hsl(30, 90%, 70%)', 'hsl(140, 60%, 70%)'
+        ];
 
-        // 烟花弹类
+        // Classes with Pooling Support
         class Firework {
-            constructor(startX, tx, ty, color, isMain = false) {
+            constructor() {
+                this.coordinates = [];
+                this.coordinateCount = 2;
+            }
+
+            init(startX, tx, ty, color, isMain) {
                 this.x = startX;
                 this.y = height;
                 this.sx = startX;
@@ -270,23 +229,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.distanceToTarget = Math.sqrt(Math.pow(tx - startX, 2) + Math.pow(ty - this.y, 2));
                 this.distanceTraveled = 0;
                 
-                this.coordinates = [];
-                this.coordinateCount = 3;
-                while(this.coordinateCount--) {
+                this.coordinates.length = 0;
+                for(let i=0; i<this.coordinateCount; i++) {
                     this.coordinates.push([this.x, this.y]);
                 }
                 
                 this.angle = Math.atan2(ty - height, tx - startX);
-                // 速度调整：主烟花更慢更优雅
-                this.speed = isMain ? 2.5 : random(2, 4); 
-                this.acceleration = 1.02; // 极轻微加速，接近匀速
+                this.speed = isMain ? 2.5 : random(2, 4);
+                this.acceleration = 1.02;
                 this.brightness = random(50, 70);
+                this.active = true;
             }
 
             update(index) {
                 this.coordinates.pop();
                 this.coordinates.unshift([this.x, this.y]);
-                
                 this.speed *= this.acceleration;
                 
                 const vx = Math.cos(this.angle) * this.speed;
@@ -294,14 +251,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 this.distanceTraveled = Math.sqrt(Math.pow(this.sx - this.x - vx, 2) + Math.pow(this.sy - this.y - vy, 2));
                 
-                if(this.distanceTraveled >= this.distanceToTarget) {
-                    // 到达目标，引爆
+                if (this.distanceTraveled >= this.distanceToTarget) {
                     createParticles(this.tx, this.ty, this.color, this.isMain);
-                    fireworks.splice(index, 1);
+                    this.active = false;
+                    // Return to pool
+                    activeFireworks.splice(index, 1);
+                    fireworkPool.push(this);
                     
-                    // 如果是主烟花爆炸，触发后续流程
                     if (this.isMain) {
-                        setTimeout(showCaptionsAndBackgroundFireworks, 2000); // 等待粒子散去再出字幕
+                        setTimeout(showCaptionsAndBackgroundFireworks, 2000);
                     }
                 } else {
                     this.x += vx;
@@ -314,47 +272,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
                 ctx.lineTo(this.x, this.y);
                 ctx.strokeStyle = this.color;
-                ctx.lineWidth = this.isMain ? 2 : 1.5;
+                ctx.lineWidth = this.isMain ? 2 : 1;
                 ctx.stroke();
             }
         }
 
-        // 粒子类
         class Particle {
-            constructor(x, y, color, isMain) {
+            constructor() {
+                this.coordinates = [];
+            }
+
+            init(x, y, color, isMain) {
                 this.x = x;
                 this.y = y;
                 this.color = color;
-                this.coordinates = [];
-                this.coordinateCount = 6;
-                while(this.coordinateCount--) {
+                this.coordinates.length = 0;
+                this.coordinateCount = isMain ? 5 : 3;
+                for(let i=0; i<this.coordinateCount; i++) {
                     this.coordinates.push([this.x, this.y]);
                 }
                 
                 this.angle = random(0, Math.PI * 2);
-                // 爆炸速度：主烟花大而缓，背景烟花小而精致
                 this.speed = isMain ? random(1, 8) : random(1, 5);
-                
-                this.friction = 0.96; // 摩擦力大一点，减速更明显
-                this.gravity = 0.04;  // 重力很小，营造悬浮感
-                
+                this.friction = 0.96;
+                this.gravity = 0.04;
                 this.alpha = 1;
-                // 消失极慢
-                this.decay = isMain ? random(0.005, 0.01) : random(0.01, 0.02);
+                this.decay = isMain ? random(0.005, 0.01) : random(0.015, 0.025);
+                this.active = true;
             }
 
             update(index) {
                 this.coordinates.pop();
                 this.coordinates.unshift([this.x, this.y]);
-                
                 this.speed *= this.friction;
                 this.x += Math.cos(this.angle) * this.speed;
                 this.y += Math.sin(this.angle) * this.speed + this.gravity;
-                
                 this.alpha -= this.decay;
                 
-                if(this.alpha <= this.decay) {
-                    particles.splice(index, 1);
+                if (this.alpha <= this.decay) {
+                    this.active = false;
+                    activeParticles.splice(index, 1);
+                    particlePool.push(this);
                 }
             }
 
@@ -362,93 +320,97 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.beginPath();
                 ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
                 ctx.lineTo(this.x, this.y);
-                // 使用传入的颜色，不混色
                 ctx.strokeStyle = this.color.replace(')', `, ${this.alpha})`).replace('hsl', 'hsla');
                 ctx.stroke();
             }
         }
 
+        // Object Factory
+        function createFirework(startX, tx, ty, color, isMain) {
+            let fw = fireworkPool.pop();
+            if (!fw) fw = new Firework();
+            fw.init(startX, tx, ty, color, isMain);
+            activeFireworks.push(fw);
+        }
+
         function createParticles(x, y, color, isMain) {
-            let particleCount = isMain ? 180 : 80;
-            while(particleCount--) {
-                particles.push(new Particle(x, y, color, isMain));
+            let count = isMain ? 150 : 60;
+            if (IS_MOBILE) count = isMain ? 80 : 30;
+            
+            while(count--) {
+                let p = particlePool.pop();
+                if (!p) p = new Particle();
+                p.init(x, y, color, isMain);
+                activeParticles.push(p);
             }
         }
 
-        // 循环渲染
+        // Animation Loop
         function loop() {
             requestAnimationFrame(loop);
             
-            // 极淡的拖尾，让画面更干净
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; 
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.fillRect(0, 0, width, height);
-            ctx.globalCompositeOperation = 'lighter';
             
-            let i = fireworks.length;
+            let i = activeFireworks.length;
             while(i--) {
-                fireworks[i].draw();
-                fireworks[i].update(i);
+                activeFireworks[i].draw();
+                activeFireworks[i].update(i);
             }
             
-            let j = particles.length;
+            let j = activeParticles.length;
             while(j--) {
-                particles[j].draw();
-                particles[j].update(j);
+                activeParticles[j].draw();
+                activeParticles[j].update(j);
             }
         }
         loop();
 
-        // 流程控制 1：发射主烟花
-        // 延迟 500ms 启动，确保转场完成
+        // Sequence Logic
+        // 1. Launch Main Firework
         setTimeout(() => {
             const startX = width / 2;
             const targetX = width / 2;
-            const targetY = height * 0.3; // 屏幕中上部
-            // 主烟花使用鎏金色
-            fireworks.push(new Firework(startX, targetX, targetY, colors[1], true));
+            const targetY = height * 0.3;
+            createFirework(startX, targetX, targetY, colors[1], true);
         }, 500);
 
-        // 流程控制 2：显示字幕 + 启动背景烟花
+        // 2. Background Loop
         function showCaptionsAndBackgroundFireworks() {
-            // 1. 显示字幕
+            // Show Captions
             const lines = document.querySelectorAll('.ending-line');
             lines.forEach((line, index) => {
                 setTimeout(() => {
-                    line.style.animation = `slideUp 2s ease forwards`; // 更慢的浮现
-                }, index * 2000); 
+                    line.style.animation = `slideUp 2s ease forwards`;
+                }, index * 2000);
             });
 
-            // 显示按钮
             setTimeout(() => {
                 document.querySelector('.restart-btn').style.opacity = 1;
             }, lines.length * 2000 + 1000);
 
-            // 2. 启动背景烟花 (随机、舒缓)
+            // Background Fireworks Loop
             setInterval(() => {
-                if (Math.random() > 0.6) { // 低频
+                if (Math.random() > 0.6) {
                     const startX = random(width * 0.1, width * 0.9);
                     const targetX = random(width * 0.1, width * 0.9);
-                    // 避开字幕区域 (中间偏下)，尽量在两边或上方
                     let targetY;
                     if (targetX > width * 0.3 && targetX < width * 0.7) {
-                        targetY = random(height * 0.1, height * 0.4); // 中间就飞高点
+                        targetY = random(height * 0.1, height * 0.4);
                     } else {
-                        targetY = random(height * 0.1, height * 0.7); // 两边随意
+                        targetY = random(height * 0.1, height * 0.7);
                     }
-                    
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    fireworks.push(new Firework(startX, targetX, targetY, color, false));
+                    const color = colors[Math.floor(random(0, colors.length))];
+                    createFirework(startX, targetX, targetY, color, false);
                 }
             }, 1800);
         }
     }
 
-    // 辅助：音乐淡入
+    // --- Audio Helpers ---
     function fadeInAudio(audio, targetVolume) {
         const step = 0.05;
-        const interval = 200; // 每200ms增加音量
-        
+        const interval = 200;
         const fade = setInterval(() => {
             if (audio.volume < targetVolume - step) {
                 audio.volume += step;
@@ -459,11 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, interval);
     }
 
-    // 辅助：音乐淡出
     function fadeOutAudio(audio, callback) {
         const step = 0.05;
         const interval = 200;
-        
         const fade = setInterval(() => {
             if (audio.volume > step) {
                 audio.volume -= step;
