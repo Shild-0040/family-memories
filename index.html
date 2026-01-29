@@ -24,7 +24,7 @@
     </div>
 
     <!-- 音乐播放器 (隐藏) -->
-    <audio id="bgm" loop>
+    <audio id="bgm" loop preload="auto">
         <source src="bgm.mp3" type="audio/mpeg">
     </audio>
 
@@ -37,32 +37,38 @@
 
         <!-- 图片/视频列表 (JS动态控制显示) -->
         <div class="slide-wrapper">
-            <!-- 重新扫描后的图片列表 -->
-            <img src="image/1769655347454.jpg" class="slide-item active" alt="Memory">
-            <img src="image/1769655416571.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544496.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544503.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544510.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544518.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544529.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544541.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544554.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544563.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544571.jpg" class="slide-item" alt="Memory">
-            <img src="image/1769655544585.jpg" class="slide-item" alt="Memory">
-            <img src="image/IMG_20250216_215641.jpg" class="slide-item" alt="Memory">
-            <img src="image/Image_410523003334853.jpg" class="slide-item" alt="Memory">
-            <img src="image/Image_411045321207807.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713862119.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713866041.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713868688.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713872473.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713874579.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713876468.jpg" class="slide-item" alt="Memory">
-            <img src="image/mmexport1739713880658.jpg" class="slide-item" alt="Memory">
+            <!-- 
+                优化策略：
+                1. 第一张图片直接加载 (src)
+                2. 后续图片使用懒加载 (data-src)，由 JS 预加载
+                3. 添加 decoding="async" 异步解码
+            -->
+            <img src="image/1769655347454.jpg" class="slide-item active" alt="Memory" decoding="async">
+            
+            <img data-src="image/1769655416571.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544496.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544503.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544510.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544518.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544529.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544541.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544554.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544563.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544571.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/1769655544585.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/IMG_20250216_215641.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/Image_410523003334853.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/Image_411045321207807.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713862119.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713866041.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713868688.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713872473.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713874579.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713876468.jpg" class="slide-item" alt="Memory" decoding="async">
+            <img data-src="image/mmexport1739713880658.jpg" class="slide-item" alt="Memory" decoding="async">
             
             <!-- 视频放在最后 -->
-            <video src="image/mmexport1739713864019.mp4" class="slide-item video-slide" muted playsinline></video>
+            <video data-src="image/mmexport1739713864019.mp4" class="slide-item video-slide" muted playsinline preload="metadata"></video>
         </div>
 
         <!-- 装饰性文字层 -->

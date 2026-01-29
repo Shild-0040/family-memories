@@ -22,8 +22,32 @@ document.addEventListener('DOMContentLoaded', () => {
         "未完待续的故事..."
     ];
 
+    // 智能预加载函数
+    function preloadNextImage(index) {
+        // 预加载下两张
+        for (let i = 1; i <= 2; i++) {
+            const nextIndex = (index + i) % slides.length;
+            const nextSlide = slides[nextIndex];
+            
+            if (nextSlide.tagName === 'IMG' && nextSlide.hasAttribute('data-src')) {
+                nextSlide.src = nextSlide.getAttribute('data-src');
+                nextSlide.removeAttribute('data-src');
+            } else if (nextSlide.tagName === 'VIDEO' && nextSlide.hasAttribute('data-src')) {
+                // 视频在接近时才加载
+                if (i === 1) { 
+                    nextSlide.src = nextSlide.getAttribute('data-src');
+                    nextSlide.removeAttribute('data-src');
+                    nextSlide.load();
+                }
+            }
+        }
+    }
+
     // 1. 开始按钮点击事件
     enterBtn.addEventListener('click', () => {
+        // 立即开始预加载前几张
+        preloadNextImage(0);
+
         // 淡入音乐
         bgm.volume = 0;
         bgm.play().then(() => {
@@ -51,11 +75,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showSlide(index) {
+        // 预加载后续图片
+        preloadNextImage(index);
+
         // 移除所有激活状态
         slides.forEach(slide => slide.classList.remove('active'));
         
         // 激活当前张
         const currentSlide = slides[index];
+        
+        // 确保当前图片已加载 (如果还没被预加载)
+        if (currentSlide.tagName === 'IMG' && currentSlide.hasAttribute('data-src')) {
+            currentSlide.src = currentSlide.getAttribute('data-src');
+            currentSlide.removeAttribute('data-src');
+        }
+
         currentSlide.classList.add('active');
 
         // 更新文案 (每3张换一次文案)
@@ -94,6 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleVideoSlide(video) {
         clearInterval(slideInterval); // 暂停自动轮播
         
+        // 确保视频源已加载
+        if (video.hasAttribute('data-src')) {
+            video.src = video.getAttribute('data-src');
+            video.removeAttribute('data-src');
+        }
+
         // 音乐淡出
         fadeOutAudio(bgm, () => {
             bgm.pause();
@@ -102,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 播放视频
         video.currentTime = 0;
         video.muted = false; // 开启视频声音
-        video.play();
+        video.play().catch(e => console.log("Video play failed:", e));
 
         // 视频结束后
         video.onended = () => {
