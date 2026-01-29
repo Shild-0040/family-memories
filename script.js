@@ -100,7 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             img.onerror = () => {
                 console.warn(`Image load failed: ${asset.src}`);
-                updateProgress(); // 失败也计数，避免死锁
+                // 加载失败时，尝试重新加载或使用占位符
+                // 这里简单起见，我们认为它完成了，防止阻塞，但在控制台记录
+                updateProgress(); 
             };
             img.src = asset.src;
         } else if (asset.type === 'VIDEO') {
