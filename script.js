@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 淡入音乐
         bgm.volume = 0;
         bgm.play().then(() => {
-            fadeInAudio(bgm, 0.6); // 目标音量 0.6
+            fadeInAudio(bgm, 0.3); // 目标音量降低至 0.3 (30%)
         }).catch(e => console.log(e));
 
         // 隐藏欢迎页
