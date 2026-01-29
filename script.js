@@ -320,17 +320,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function endSlideshow() {
         // clearInterval(slideInterval);
-        // 如果是视频结束进来的，音乐已经停了；如果是图片进来的，音乐还在
-        // 我们统一逻辑：先确保音乐是暂停状态，然后重新播放并淡入
-        // 这样可以确保结尾的时候背景音乐是温柔地响起的
         
+        // 1. 停止视频（如果有）
+        slides.forEach(slide => {
+            if (slide.tagName === 'VIDEO') {
+                slide.pause();
+                slide.currentTime = 0;
+            }
+        });
+
+        // 2. 音频处理
         bgm.pause();
-        bgm.currentTime = 0; // 可选：从头开始放，或者接着放看需求。这里从头开始更有仪式感
+        bgm.currentTime = 0; 
         bgm.volume = 0;
         bgm.play().then(() => fadeInAudio(bgm, 0.5)).catch(console.error);
         
+        // 3. 界面切换 (强制隐藏幻灯片容器)
+        // 使用 display: none 确保彻底消失，不挡在上面
         slideshowContainer.style.opacity = 0;
-        slideshowContainer.style.pointerEvents = 'none'; // 禁用点击，防止触发切换
+        slideshowContainer.style.pointerEvents = 'none';
+        setTimeout(() => {
+            slideshowContainer.style.display = 'none'; // 彻底移除
+        }, 1000); // 等 opacity 动画播完
+
         endingScreen.classList.add('visible');
         
         startFireworks();
