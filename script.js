@@ -48,6 +48,17 @@ document.addEventListener('DOMContentLoaded', () => {
     bgm.oncanplaythrough = checkLoadProgress;
     bgm.onerror = checkLoadProgress; // 即使失败也算完成
 
+    // 容错机制：设置一个 8 秒的超时定时器
+    // 如果网络太慢导致资源一直在加载，8秒后强制显示开启按钮，不让用户干等
+    setTimeout(() => {
+        if (loadedCount < TOTAL_RESOURCES) {
+            console.log('Loading timed out, forcing start.');
+            // 强制设置为完成状态
+            loadedCount = TOTAL_RESOURCES;
+            checkLoadProgress();
+        }
+    }, 8000);
+
     // 获取前几张图片/视频
     const initialResources = Array.from(slides).slice(0, PRELOAD_COUNT);
     

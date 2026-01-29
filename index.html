@@ -6,6 +6,15 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- 针对国产浏览器的优化配置 -->
+    <meta name="renderer" content="webkit">
+    <meta name="force-rendering" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="x5-fullscreen" content="true">
+    <meta name="full-screen" content="yes">
+    <meta name="x5-page-mode" content="app">
+    <meta name="browsermode" content="application">
+    <meta name="wap-font-scale" content="no">
     <title>我们的时光 | Family Memories</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -71,7 +80,17 @@
             <img data-src="image/mmexport1739713880658.jpg" class="slide-item" alt="Memory" decoding="async">
             
             <!-- 视频放在最后 -->
-            <video data-src="image/mmexport1739713864019.mp4" class="slide-item video-slide" muted playsinline preload="metadata"></video>
+            <video 
+                data-src="image/mmexport1739713864019.mp4" 
+                class="slide-item video-slide" 
+                muted 
+                playsinline 
+                webkit-playsinline 
+                x5-playsinline 
+                x5-video-player-type="h5"
+                x5-video-player-fullscreen="true"
+                preload="metadata">
+            </video>
         </div>
     </div>
 
