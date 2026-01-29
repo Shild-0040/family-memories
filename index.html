@@ -50,14 +50,14 @@
         <div class="slide-wrapper">
             <!-- 
                 优化策略：
-                1. 第一张图片直接加载 (src)
-                2. 后续图片使用懒加载 (data-src)，由 JS 预加载
-                3. 添加 decoding="async" 异步解码
+                1. 前 3 张图片直接加载 (src)，确保首屏秒开
+                2. 后续图片使用懒加载 (data-src)
+                3. 添加 decoding="sync" 强制同步解码 (最稳妥)
             -->
-            <img src="image/1769655347454.jpg" class="slide-item active" alt="" decoding="async">
+            <img src="image/1769655347454.jpg" class="slide-item active" alt="" decoding="sync">
+            <img src="image/1769655416571.jpg" class="slide-item" alt="" decoding="sync">
+            <img src="image/1769655544496.jpg" class="slide-item" alt="" decoding="sync">
             
-            <img data-src="image/1769655416571.jpg" class="slide-item" alt="" decoding="async">
-            <img data-src="image/1769655544496.jpg" class="slide-item" alt="" decoding="async">
             <img data-src="image/1769655544503.jpg" class="slide-item" alt="" decoding="async">
             <img data-src="image/1769655544510.jpg" class="slide-item" alt="" decoding="async">
             <img data-src="image/1769655544518.jpg" class="slide-item" alt="" decoding="async">

@@ -183,15 +183,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 容错机制：10秒超时 (关键资源如果10秒没好，强制进)
+    // 容错机制：5秒后如果还没好，显示“重试”按钮 (Safe Mode)
     setTimeout(() => {
         if (!isEnterEnabled) {
-            console.warn('Critical loading timeout. Forcing enable.');
-            loadedCount = criticalTotal;
-            enableEnterButton();
-            loadRemainingAssets(); // 强制进也触发后台加载
+            console.warn('Loading slow. Enabling Safe Mode.');
+            btnText.textContent = '点我开启 (安全模式)';
+            enterBtn.style.opacity = '1';
+            enterBtn.style.pointerEvents = 'auto';
+            enterBtn.classList.add('ready-pulse');
+            isEnterEnabled = true;
+            
+            // 安全模式下，点击直接开始，不等待后续资源
+            enterBtn.onclick = () => {
+                welcomeScreen.style.display = 'none';
+                slideshowContainer.classList.add('visible');
+                // 强制显示第一张
+                slides[0].classList.add('active');
+                slides[0].style.opacity = 1;
+                startSlideshow();
+                bgm.play().catch(() => {});
+            };
         }
-    }, 10000);
+    }, 5000);
 
 
     // --- 2. Interaction & Slideshow ---
