@@ -2,15 +2,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- UA Check for QQ/WeChat ---
     const ua = navigator.userAgent.toLowerCase();
     const isWeChat = /micromessenger/.test(ua);
-    const isQQ = /qq\//.test(ua) || /mqqbrowser/.test(ua);
+    // 关键修正：只拦截 QQ App 内置浏览器 (包含 "qq/")
+    // 移除对 "mqqbrowser" 的检测，因为 QQ 浏览器 App 的 UA 也包含它，导致跳转后依然被拦截
+    // 同时显式放行百度浏览器 (baidu)
+    const isQQApp = /qq\//.test(ua); 
     
-    if (isWeChat || isQQ) {
-        // 如果是微信或QQ，尝试显示引导层
-        // 但为了防止误判，我们可以先只在真正遇到问题（比如视频无法自动播放）时提示
-        // 或者直接提示，因为 QQ 确实经常拦截 GitHub Pages
+    if (isWeChat || isQQApp) {
         const guide = document.getElementById('wx-guide');
         if (guide) guide.style.display = 'block';
-        // 不阻断后续逻辑，万一用户强行要看也能看，只是体验不好
     }
 
     // --- DOM Elements ---
