@@ -44,7 +44,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 1. 开始按钮点击事件
+    // 1. 资源预加载逻辑
+    const PRELOAD_COUNT = 3; // 预加载前3张，确保开场流畅
+    let loadedCount = 0;
+    
+    // 初始状态：禁用按钮
+    enterBtn.style.opacity = '0.5';
+    enterBtn.style.pointerEvents = 'none';
+    const btnText = enterBtn.querySelector('.btn-text');
+    btnText.textContent = '资源加载中...';
+
+    // 获取前几张图片/视频
+    const initialResources = Array.from(slides).slice(0, PRELOAD_COUNT);
+    
+    initialResources.forEach(slide => {
+        const src = slide.getAttribute('src') || slide.getAttribute('data-src');
+        if (!src) {
+            checkLoadProgress();
+            return;
+        }
+
+        if (slide.tagName === 'IMG') {
+            const img = new Image();
+            img.src = src;
+            img.onload = checkLoadProgress;
+            img.onerror = checkLoadProgress; // 即使失败也继续，避免卡死
+        } else if (slide.tagName === 'VIDEO') {
+            const video = document.createElement('video');
+            video.src = src;
+            video.onloadedmetadata = checkLoadProgress;
+            video.onerror = checkLoadProgress;
+        }
+    });
+
+    function checkLoadProgress() {
+        loadedCount++;
+        const percent = Math.floor((loadedCount / PRELOAD_COUNT) * 100);
+        btnText.textContent = `资源加载中... ${percent}%`;
+
+        if (loadedCount >= PRELOAD_COUNT) {
+            // 加载完成
+            btnText.textContent = '开启回忆录';
+            enterBtn.style.opacity = '1';
+            enterBtn.style.pointerEvents = 'auto';
+            enterBtn.classList.add('ready-pulse'); // 添加呼吸效果提示可点击
+        }
+    }
+
+    // 2. 开始按钮点击事件
     enterBtn.addEventListener('click', () => {
         // 立即开始预加载前几张
         preloadNextImage(0);
