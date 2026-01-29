@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnText = enterBtn.querySelector('.btn-text');
 
     // --- Configuration ---
-    const SLIDE_DURATION = 5000;
+    const SLIDE_DURATION = 3000;
     const IS_MOBILE = window.innerWidth < 768;
     const PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, 2);
 
@@ -173,15 +173,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startSlideshow() {
         showSlide(0);
-        // 移除自动轮播，改为手动切换
-        // slideInterval = setInterval(nextSlide, SLIDE_DURATION);
+        resetTimer();
+    }
+
+    // 重置/启动定时器
+    function resetTimer() {
+        if (slideInterval) clearInterval(slideInterval);
+        slideInterval = setInterval(nextSlide, SLIDE_DURATION);
     }
 
     // 手动切换逻辑：点击屏幕切换下一张
     slideshowContainer.addEventListener('click', handleUserSwitch);
     slideshowContainer.addEventListener('touchend', (e) => {
-        // 防止触摸滑动触发点击
-        // 简单处理：如果没有发生大幅度滑动，算作点击
         handleUserSwitch(e);
     });
 
@@ -192,9 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
         
-        // 节流，防止快速点击
-        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return; // 排除按钮点击
+        // 排除按钮点击
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
         
+        // 手动切换时，重置自动播放定时器（重新计时）
+        resetTimer();
         nextSlide();
     }
 
@@ -228,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleVideoSlide(video) {
-        // clearInterval(slideInterval); // 不再需要清除定时器
+        clearInterval(slideInterval); // 视频播放时暂停自动轮播
         fadeOutAudio(bgm, () => bgm.pause());
         
         video.currentTime = 0;
