@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const percent = Math.floor((loadedCount / totalAssets) * 100);
         
         if (!isEnterEnabled) {
-            btnText.textContent = `资源加载中... ${Math.min(percent, 99)}%`;
+            btnText.textContent = `记忆恢复中... ${Math.min(percent, 99)}%`;
         }
         
         if (loadedCount >= totalAssets) {
@@ -92,16 +92,28 @@ document.addEventListener('DOMContentLoaded', () => {
     assetsToLoad.forEach(asset => {
         if (asset.type === 'IMG') {
             const img = new Image();
-            img.onload = () => {
-                // 加载成功后，将真实 src 赋给 DOM 元素
+            
+            const handleImageLoad = () => {
                 asset.element.src = asset.src;
                 asset.element.removeAttribute('data-src');
                 updateProgress();
             };
+
+            img.onload = () => {
+                // 尝试解码，防止图片虽然加载但渲染黑屏
+                if ('decode' in img) {
+                    img.decode().then(handleImageLoad).catch((err) => {
+                        console.warn('Image decode error, falling back:', err);
+                        handleImageLoad();
+                    });
+                } else {
+                    handleImageLoad();
+                }
+            };
+            
             img.onerror = () => {
                 console.warn(`Image load failed: ${asset.src}`);
-                // 加载失败时，尝试重新加载或使用占位符
-                // 这里简单起见，我们认为它完成了，防止阻塞，但在控制台记录
+                // 失败时使用占位或者直接算作完成，避免死锁
                 updateProgress(); 
             };
             img.src = asset.src;
@@ -161,7 +173,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startSlideshow() {
         showSlide(0);
-        slideInterval = setInterval(nextSlide, SLIDE_DURATION);
+        // 移除自动轮播，改为手动切换
+        // slideInterval = setInterval(nextSlide, SLIDE_DURATION);
+    }
+
+    // 手动切换逻辑：点击屏幕切换下一张
+    slideshowContainer.addEventListener('click', handleUserSwitch);
+    slideshowContainer.addEventListener('touchend', (e) => {
+        // 防止触摸滑动触发点击
+        // 简单处理：如果没有发生大幅度滑动，算作点击
+        handleUserSwitch(e);
+    });
+
+    function handleUserSwitch(e) {
+        // 如果正在播放视频，不要切换
+        const currentSlide = slides[currentIndex];
+        if (currentSlide.tagName === 'VIDEO' && !currentSlide.ended) {
+            return; 
+        }
+        
+        // 节流，防止快速点击
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return; // 排除按钮点击
+        
+        nextSlide();
     }
 
     function nextSlide() {
@@ -194,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleVideoSlide(video) {
-        clearInterval(slideInterval);
+        // clearInterval(slideInterval); // 不再需要清除定时器
         fadeOutAudio(bgm, () => bgm.pause());
         
         video.currentTime = 0;
@@ -230,10 +264,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function endSlideshow() {
-        clearInterval(slideInterval);
+        // clearInterval(slideInterval);
         if (!bgm.paused) fadeOutAudio(bgm, () => bgm.pause());
         
         slideshowContainer.style.opacity = 0;
+        slideshowContainer.style.pointerEvents = 'none'; // 禁用点击，防止触发切换
         endingScreen.classList.add('visible');
         
         startFireworks();
@@ -449,6 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
             lines.forEach((line, index) => {
                 setTimeout(() => {
                     line.style.animation = `slideUp 2s ease forwards`;
+                    // 双重保险：动画结束后强制设置状态，防止部分浏览器动画失效
+                    setTimeout(() => {
+                        line.style.opacity = '1';
+                        line.style.transform = 'translateY(0)';
+                    }, 2100);
                 }, index * 2000);
             });
 

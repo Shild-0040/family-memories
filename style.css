@@ -180,22 +180,22 @@ body, html {
     object-fit: contain;
     background-color: #000; /* 兜底背景色，防止透明导致看见底层 */
     opacity: 0;
-    transform: scale(1);
+    /* 移除 scale 变换，手动切换更适合淡入淡出 */
+    /* transform: scale(1); */
     z-index: 2;
     /* 核心修复：防止 iOS/Android 切换闪烁 */
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     -webkit-transform-style: preserve-3d;
     transform-style: preserve-3d;
-    /* 优化过渡曲线 */
-    transition: opacity 1.5s linear, transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    will-change: opacity, transform;
+    /* 优化过渡曲线，移除 transform */
+    transition: opacity 0.8s ease-in-out;
+    /* 移除 will-change 防止内存溢出 */
 }
 
 .slide-item.active {
     opacity: 1;
-    transform: scale(1.05); /* 稍微减小放大倍数，保持优雅 */
-    -webkit-transform: scale(1.05);
+    /* transform: scale(1.05); */
     z-index: 3;
 }
 
@@ -250,7 +250,8 @@ body, html {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh;
+    min-height: 100vh; /* 使用 min-height 适配 */
+    height: 100%; /* 兼容 fixed 定位 */
     background: #000;
     display: flex;
     justify-content: center;
@@ -259,6 +260,7 @@ body, html {
     opacity: 0;
     pointer-events: none;
     transition: opacity 3s ease;
+    overflow-y: auto; /* 允许滚动 */
 }
 
 #ending-screen.visible {
