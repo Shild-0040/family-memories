@@ -82,7 +82,8 @@ body, html {
     overflow: hidden;
     transition: all 0.5s ease;
     opacity: 0;
-    animation: fadeIn 2s ease-out 2.5s forwards;
+    /* 缩短延迟：从 2.5s 改为 0.5s，让进度条尽快显示 */
+    animation: fadeIn 1s ease-out 0.5s forwards;
     /* 增大点击热区 */
     min-width: 180px; 
     min-height: 50px;
