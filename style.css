@@ -108,7 +108,7 @@ body {
     opacity: 1;
 }
 
-/* 动态模糊背景 */
+/* 动态模糊背景 - 性能优化版 */
 .slide-blur-bg {
     position: absolute;
     top: 0;
@@ -117,10 +117,24 @@ body {
     height: 100%;
     background-size: cover;
     background-position: center;
-    filter: blur(30px) brightness(0.6);
-    transform: scale(1.1); /* 防止模糊边缘露白 */
+    /* 移除 blur 滤镜，改用半透明遮罩叠加，大幅提升手机性能 */
+    /* filter: blur(30px) brightness(0.6); */
+    transform: translateZ(0); /* 开启 GPU 加速 */
     z-index: 0;
     transition: background-image 1s ease-in-out;
+}
+
+/* 添加一个纯色遮罩层模拟变暗效果，比 filter 性能好 */
+.slide-blur-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7); /* 深色遮罩 */
+    backdrop-filter: blur(20px); /* 仅支持的浏览器启用，不支持则降级 */
+    -webkit-backdrop-filter: blur(20px);
 }
 
 .slide-wrapper {

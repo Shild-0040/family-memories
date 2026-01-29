@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 1. 资源预加载逻辑
-    const PRELOAD_COUNT = 3; // 预加载前3张，确保开场流畅
+    const PRELOAD_COUNT = 5; // 增加预加载数量到5张，提升流畅度
     let loadedCount = 0;
     
     // 初始状态：禁用按钮
@@ -43,9 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnText = enterBtn.querySelector('.btn-text');
     btnText.textContent = '资源加载中...';
 
+    // 预加载音频
+    bgm.load();
+    bgm.oncanplaythrough = checkLoadProgress;
+    bgm.onerror = checkLoadProgress; // 即使失败也算完成
+
     // 获取前几张图片/视频
     const initialResources = Array.from(slides).slice(0, PRELOAD_COUNT);
     
+    // 总共需要加载的资源数 = 图片数 + 音频
+    const TOTAL_RESOURCES = initialResources.length + 1;
+
     initialResources.forEach(slide => {
         const src = slide.getAttribute('src') || slide.getAttribute('data-src');
         if (!src) {
@@ -61,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (slide.tagName === 'VIDEO') {
             const video = document.createElement('video');
             video.src = src;
+            video.preload = 'metadata'; // 仅加载元数据，避免卡顿
             video.onloadedmetadata = checkLoadProgress;
             video.onerror = checkLoadProgress;
         }
@@ -68,10 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkLoadProgress() {
         loadedCount++;
-        const percent = Math.floor((loadedCount / PRELOAD_COUNT) * 100);
-        btnText.textContent = `资源加载中... ${percent}%`;
+        const percent = Math.floor((loadedCount / TOTAL_RESOURCES) * 100);
+        btnText.textContent = `资源加载中... ${Math.min(percent, 99)}%`; // 避免直接跳到100
 
-        if (loadedCount >= PRELOAD_COUNT) {
+        if (loadedCount >= TOTAL_RESOURCES) {
             // 加载完成
             btnText.textContent = '开启回忆录';
             enterBtn.style.opacity = '1';
