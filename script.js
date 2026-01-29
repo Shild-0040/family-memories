@@ -185,9 +185,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2. Interaction & Slideshow ---
     enterBtn.addEventListener('click', () => {
-        // Play Audio
+        // Play Audio (Strong Force)
+        // 核心修复：直接在点击事件回调中调用 play，这是浏览器最信任的时刻
+        bgm.muted = false; // 确保不静音
         bgm.volume = 0;
-        bgm.play().then(() => fadeInAudio(bgm, 0.3)).catch(console.error);
+        
+        const playPromise = bgm.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                fadeInAudio(bgm, 0.3);
+            }).catch(error => {
+                console.warn('Initial BGM play failed, waiting for user interaction:', error);
+                // 如果失败，添加全局一次性点击救场
+                addGlobalAudioUnlock();
+            });
+        }
 
         // Transition
         welcomeScreen.classList.add('hidden');
@@ -197,6 +209,22 @@ document.addEventListener('DOMContentLoaded', () => {
             startSlideshow();
         }, 1500);
     });
+
+    // 全局音频解锁（救场机制）
+    function addGlobalAudioUnlock() {
+        const unlock = () => {
+            if (bgm.paused) {
+                bgm.play().then(() => {
+                    fadeInAudio(bgm, 0.3);
+                    // 成功播放后移除监听
+                    document.removeEventListener('click', unlock);
+                    document.removeEventListener('touchstart', unlock);
+                }).catch(console.error);
+            }
+        };
+        document.addEventListener('click', unlock);
+        document.addEventListener('touchstart', unlock);
+    }
 
     function startSlideshow() {
         showSlide(0);
