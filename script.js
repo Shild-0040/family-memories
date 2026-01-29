@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function endSlideshow() {
         clearInterval(slideInterval);
         
-        // 如果最后不是视频（或者有其他情况），确保音乐淡出
+        // 音乐淡出
         if (!bgm.paused) {
             fadeOutAudio(bgm, () => bgm.pause());
         }
@@ -223,31 +223,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 启动烟花特效
         startFireworks();
-
-        // 延迟显示文字，等待大烟花绽放
-        setTimeout(() => {
-            // 逐行显示寄语
-            const lines = document.querySelectorAll('.ending-line');
-            lines.forEach((line, index) => {
-                setTimeout(() => {
-                    line.style.animation = `slideUp 1.5s ease forwards`;
-                }, index * 1500); // 每句间隔1.5秒
-            });
-
-            // 显示重温按钮
-            setTimeout(() => {
-                document.querySelector('.restart-btn').style.opacity = 1;
-            }, lines.length * 1500 + 1000);
-        }, 3000); // 延迟3秒，让大烟花先放一会儿
+        // 字幕显示逻辑由 startFireworks 内部控制
     }
 
-    // 5. 烟花特效系统 (终极金色流星版)
+    // 5. 烟花特效系统 (唯美慢动作版)
     function startFireworks() {
         const canvas = document.getElementById('fireworks');
         const ctx = canvas.getContext('2d');
         let width, height;
         let fireworks = []; // 升空的烟花弹
         let particles = []; // 爆炸的火花
+        
+        // 高级配色方案 (单色纯色)
+        const colors = [
+            'hsl(330, 80%, 75%)', // 柔粉
+            'hsl(45, 90%, 65%)',  // 鎏金
+            'hsl(190, 80%, 70%)', // 冰蓝
+            'hsl(260, 60%, 75%)', // 浅紫
+            'hsl(30, 90%, 70%)',  // 暖橙
+            'hsl(140, 60%, 70%)'  // 清绿
+        ];
 
         function resize() {
             width = canvas.width = window.innerWidth;
@@ -256,20 +251,21 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('resize', resize);
         resize();
 
-        // 随机数辅助
         function random(min, max) {
             return Math.random() * (max - min) + min;
         }
 
-        // 烟花弹类 (负责升空)
+        // 烟花弹类
         class Firework {
-            constructor(startX, tx, ty) {
+            constructor(startX, tx, ty, color, isMain = false) {
                 this.x = startX;
                 this.y = height;
                 this.sx = startX;
                 this.sy = height;
                 this.tx = tx;
                 this.ty = ty;
+                this.color = color;
+                this.isMain = isMain;
                 
                 this.distanceToTarget = Math.sqrt(Math.pow(tx - startX, 2) + Math.pow(ty - this.y, 2));
                 this.distanceTraveled = 0;
@@ -281,10 +277,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 this.angle = Math.atan2(ty - height, tx - startX);
-                // 随机升空参数，让节奏更自然
-                this.speed = random(2, 3.5); 
-                this.acceleration = random(1.03, 1.06); 
-                this.brightness = random(50, 70); // 稍微深一点的金色
+                // 速度调整：主烟花更慢更优雅
+                this.speed = isMain ? 2.5 : random(2, 4); 
+                this.acceleration = 1.02; // 极轻微加速，接近匀速
+                this.brightness = random(50, 70);
             }
 
             update(index) {
@@ -299,8 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.distanceTraveled = Math.sqrt(Math.pow(this.sx - this.x - vx, 2) + Math.pow(this.sy - this.y - vy, 2));
                 
                 if(this.distanceTraveled >= this.distanceToTarget) {
-                    createParticles(this.tx, this.ty);
+                    // 到达目标，引爆
+                    createParticles(this.tx, this.ty, this.color, this.isMain);
                     fireworks.splice(index, 1);
+                    
+                    // 如果是主烟花爆炸，触发后续流程
+                    if (this.isMain) {
+                        setTimeout(showCaptionsAndBackgroundFireworks, 2000); // 等待粒子散去再出字幕
+                    }
                 } else {
                     this.x += vx;
                     this.y += vy;
@@ -311,37 +313,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.beginPath();
                 ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
                 ctx.lineTo(this.x, this.y);
-                ctx.strokeStyle = 'hsl(45, 100%, ' + this.brightness + '%)';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.isMain ? 2 : 1.5;
                 ctx.stroke();
             }
         }
 
-        // 爆炸粒子类
+        // 粒子类
         class Particle {
-            constructor(x, y) {
+            constructor(x, y, color, isMain) {
                 this.x = x;
                 this.y = y;
+                this.color = color;
                 this.coordinates = [];
-                this.coordinateCount = random(5, 10); // 拖尾长度随机
+                this.coordinateCount = 6;
                 while(this.coordinateCount--) {
                     this.coordinates.push([this.x, this.y]);
                 }
                 
                 this.angle = random(0, Math.PI * 2);
-                this.speed = random(2, 18); // 爆炸范围随机性更大
+                // 爆炸速度：主烟花大而缓，背景烟花小而精致
+                this.speed = isMain ? random(1, 8) : random(1, 5);
                 
-                // 物理特性随机化
-                this.friction = random(0.92, 0.97); // 有的飞得远，有的飞得近
-                this.gravity = random(0.05, 0.2);   // 有的下坠快，有的悬浮久
+                this.friction = 0.96; // 摩擦力大一点，减速更明显
+                this.gravity = 0.04;  // 重力很小，营造悬浮感
                 
-                this.hue = random(40, 50); 
-                this.brightness = random(50, 80);
                 this.alpha = 1;
-                this.decay = random(0.005, 0.02); // 消失时间随机
-                
-                // 闪烁效果
-                this.flicker = Math.random() > 0.5;
+                // 消失极慢
+                this.decay = isMain ? random(0.005, 0.01) : random(0.01, 0.02);
             }
 
             update(index) {
@@ -354,11 +353,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 this.alpha -= this.decay;
                 
-                // 闪烁逻辑
-                if (this.flicker) {
-                    this.brightness = random(50, 100);
-                }
-                
                 if(this.alpha <= this.decay) {
                     particles.splice(index, 1);
                 }
@@ -368,26 +362,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.beginPath();
                 ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
                 ctx.lineTo(this.x, this.y);
-                ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
-                ctx.lineWidth = Math.random() > 0.5 ? 2 : 1; // 随机粗细
+                // 使用传入的颜色，不混色
+                ctx.strokeStyle = this.color.replace(')', `, ${this.alpha})`).replace('hsl', 'hsla');
                 ctx.stroke();
             }
         }
 
-        function createParticles(x, y) {
-            let particleCount = 120; // 增加粒子密度
+        function createParticles(x, y, color, isMain) {
+            let particleCount = isMain ? 180 : 80;
             while(particleCount--) {
-                particles.push(new Particle(x, y));
+                particles.push(new Particle(x, y, color, isMain));
             }
         }
 
-        // 主循环
+        // 循环渲染
         function loop() {
             requestAnimationFrame(loop);
             
-            // 拖尾残留调整，0.2让拖尾更长更明显
+            // 极淡的拖尾，让画面更干净
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; 
             ctx.fillRect(0, 0, width, height);
             ctx.globalCompositeOperation = 'lighter';
             
@@ -403,41 +397,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 particles[j].update(j);
             }
         }
-
         loop();
 
-        // 逻辑：阶段一 - 盛大开场 (5个大烟花)
-        let bigFireworksCount = 0;
-        const bigInterval = setInterval(() => {
-            // 目标：屏幕上方区域随机
-            const targetX = width / 2 + random(-300, 300);
-            const targetY = height * 0.2 + random(-100, 150);
-            
-            // 发射点控制
-            let startX;
-            if (bigFireworksCount === 0) {
-                // 第一个：绝对居中发射
-                startX = width / 2;
-            } else {
-                // 后续：随机位置发射
-                startX = random(width * 0.2, width * 0.8);
-            }
+        // 流程控制 1：发射主烟花
+        // 延迟 500ms 启动，确保转场完成
+        setTimeout(() => {
+            const startX = width / 2;
+            const targetX = width / 2;
+            const targetY = height * 0.3; // 屏幕中上部
+            // 主烟花使用鎏金色
+            fireworks.push(new Firework(startX, targetX, targetY, colors[1], true));
+        }, 500);
 
-            fireworks.push(new Firework(startX, targetX, targetY));
-            
-            bigFireworksCount++;
-            if (bigFireworksCount >= 5) clearInterval(bigInterval);
-        }, 1500); // 间隔拉长，给每个烟花表现机会
+        // 流程控制 2：显示字幕 + 启动背景烟花
+        function showCaptionsAndBackgroundFireworks() {
+            // 1. 显示字幕
+            const lines = document.querySelectorAll('.ending-line');
+            lines.forEach((line, index) => {
+                setTimeout(() => {
+                    line.style.animation = `slideUp 2s ease forwards`; // 更慢的浮现
+                }, index * 2000); 
+            });
 
-        // 逻辑：阶段二 - 零散背景
-        setInterval(() => {
-            if (Math.random() > 0.8) { // 降低频率
-                const startX = random(width * 0.1, width * 0.9);
-                const targetX = random(width * 0.1, width * 0.9);
-                const targetY = random(height * 0.1, height * 0.5);
-                fireworks.push(new Firework(startX, targetX, targetY));
-            }
-        }, 2000);
+            // 显示按钮
+            setTimeout(() => {
+                document.querySelector('.restart-btn').style.opacity = 1;
+            }, lines.length * 2000 + 1000);
+
+            // 2. 启动背景烟花 (随机、舒缓)
+            setInterval(() => {
+                if (Math.random() > 0.6) { // 低频
+                    const startX = random(width * 0.1, width * 0.9);
+                    const targetX = random(width * 0.1, width * 0.9);
+                    // 避开字幕区域 (中间偏下)，尽量在两边或上方
+                    let targetY;
+                    if (targetX > width * 0.3 && targetX < width * 0.7) {
+                        targetY = random(height * 0.1, height * 0.4); // 中间就飞高点
+                    } else {
+                        targetY = random(height * 0.1, height * 0.7); // 两边随意
+                    }
+                    
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    fireworks.push(new Firework(startX, targetX, targetY, color, false));
+                }
+            }, 1800);
+        }
     }
 
     // 辅助：音乐淡入
