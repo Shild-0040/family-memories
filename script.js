@@ -26,15 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndex = 0;
     let slideInterval;
 
-    // --- 1. Extreme Preloader (Full Asset Loading - Strict Mode) ---
-    // 策略：全量预加载。必须等待所有图片、视频、音频全部就绪才解锁。
-    // 用户明确要求：宁愿等久一点，也要保证播放流畅。
+    // --- 1. Smart Preloader (Hybrid Mode) ---
+    // 策略：首屏优先。只要加载完前 5 张图 + 音乐，就允许进入。
+    // 剩下的图片在进入后，通过后台静默加载。
+    // 既保证了开场不黑屏，又不用让用户等所有图都下完。
     
     let loadedCount = 0;
     let isEnterEnabled = false;
     const assetsToLoad = [];
+    const CRITICAL_COUNT = 5; // 关键资源数量：前5张
 
-    // 1. 收集所有资源
+    // 1. 收集资源
     slides.forEach((slide, index) => {
         const src = slide.getAttribute('data-src') || slide.src;
         if (!src) return;
@@ -43,24 +45,28 @@ document.addEventListener('DOMContentLoaded', () => {
             element: slide,
             src: src,
             type: slide.tagName,
-            index: index
+            index: index,
+            isCritical: index < CRITICAL_COUNT // 标记是否为关键资源
         });
     });
 
-    // 总资源数 = 所有视觉资源 + 背景音乐
-    const totalAssets = assetsToLoad.length + 1; 
+    // 计算关键资源总数 (前5张 + 音乐)
+    const criticalTotal = Math.min(assetsToLoad.length, CRITICAL_COUNT) + 1;
 
     // 更新加载进度
-    function updateProgress() {
-        loadedCount++;
-        const percent = Math.floor((loadedCount / totalAssets) * 100);
-        
-        if (!isEnterEnabled) {
+    function updateProgress(isCriticalAsset) {
+        if (isEnterEnabled) return; // 如果已经开启，就不管了
+
+        if (isCriticalAsset) {
+            loadedCount++;
+            const percent = Math.floor((loadedCount / criticalTotal) * 100);
             btnText.textContent = `记忆恢复中... ${Math.min(percent, 99)}%`;
-        }
-        
-        if (loadedCount >= totalAssets) {
-            enableEnterButton();
+            
+            if (loadedCount >= criticalTotal) {
+                enableEnterButton();
+                // 关键资源加载完后，开始加载剩余资源
+                loadRemainingAssets();
+            }
         }
     }
 
@@ -71,48 +77,66 @@ document.addEventListener('DOMContentLoaded', () => {
         enterBtn.style.opacity = '1';
         enterBtn.style.pointerEvents = 'auto';
         enterBtn.classList.add('ready-pulse');
-        console.log('All assets loaded. Ready to start.');
+        console.log('Critical assets loaded. Ready to start.');
     }
 
-    // 2. 加载音频
+    // 2. 加载音频 (关键资源)
     bgm.load();
-    // 兼容处理：有些浏览器 cached 状态下可能不触发 canplaythrough
     if (bgm.readyState >= 4) {
-        updateProgress();
+        updateProgress(true);
     } else {
         bgm.oncanplaythrough = () => {
             if (!bgm.dataset.loaded) {
                 bgm.dataset.loaded = "true";
-                updateProgress();
+                updateProgress(true);
             }
         };
         bgm.onerror = () => {
             if (!bgm.dataset.loaded) {
                 bgm.dataset.loaded = "true";
                 console.warn('Audio load failed, skipping.');
-                updateProgress(); 
+                updateProgress(true); 
             }
         };
     }
 
-    // 3. 加载视觉资源 (并行加载)
+    // 3. 加载关键视觉资源 (立即执行)
     assetsToLoad.forEach(asset => {
+        if (asset.isCritical) {
+            loadSingleAsset(asset, true);
+        }
+    });
+
+    // 4. 加载剩余资源 (后台执行)
+    function loadRemainingAssets() {
+        console.log('Loading remaining assets in background...');
+        assetsToLoad.forEach(asset => {
+            if (!asset.isCritical) {
+                // 稍微错峰加载，避免瞬间卡顿
+                setTimeout(() => {
+                    loadSingleAsset(asset, false);
+                }, 200 * (asset.index - CRITICAL_COUNT));
+            }
+        });
+    }
+
+    // 通用加载函数
+    function loadSingleAsset(asset, isCritical) {
+        if (asset.element.dataset.loaded) return; // 防止重复加载
+
         if (asset.type === 'IMG') {
             const img = new Image();
             
             const handleImageLoad = () => {
                 asset.element.src = asset.src;
                 asset.element.removeAttribute('data-src');
-                updateProgress();
+                asset.element.dataset.loaded = "true";
+                if (isCritical) updateProgress(true);
             };
 
             img.onload = () => {
-                // 尝试解码，防止图片虽然加载但渲染黑屏
                 if ('decode' in img) {
-                    img.decode().then(handleImageLoad).catch((err) => {
-                        console.warn('Image decode error, falling back:', err);
-                        handleImageLoad();
-                    });
+                    img.decode().then(handleImageLoad).catch(handleImageLoad);
                 } else {
                     handleImageLoad();
                 }
@@ -120,47 +144,43 @@ document.addEventListener('DOMContentLoaded', () => {
             
             img.onerror = () => {
                 console.warn(`Image load failed: ${asset.src}`);
-                // 失败时使用占位或者直接算作完成，避免死锁
-                updateProgress(); 
+                if (isCritical) updateProgress(true);
             };
             img.src = asset.src;
         } else if (asset.type === 'VIDEO') {
             asset.element.src = asset.src;
             asset.element.removeAttribute('data-src');
-            asset.element.preload = 'auto'; // 强制预加载视频数据
+            // 关键视频用 auto，后台视频用 metadata 省流量
+            asset.element.preload = isCritical ? 'auto' : 'metadata'; 
             asset.element.load();
             
-            // 视频只要加载了足够当前播放的数据就算成功
             const onVideoLoaded = () => {
                 if (!asset.element.dataset.loaded) {
                     asset.element.dataset.loaded = "true";
-                    updateProgress();
+                    if (isCritical) updateProgress(true);
                 }
             };
             
-            // 兼容多种事件，确保能捕获完成状态
             asset.element.onloadeddata = onVideoLoaded;
             asset.element.oncanplay = onVideoLoaded;
             asset.element.onerror = () => {
                 if (!asset.element.dataset.loaded) {
                     asset.element.dataset.loaded = "true";
-                    console.warn(`Video load failed: ${asset.src}`);
-                    updateProgress();
+                    if (isCritical) updateProgress(true);
                 }
             };
         }
-    });
+    }
 
-    // 容错机制：20秒超时
-    // 如果网络实在太差，20秒后强制允许进入，防止用户流失
+    // 容错机制：10秒超时 (关键资源如果10秒没好，强制进)
     setTimeout(() => {
         if (!isEnterEnabled) {
-            console.warn('Loading timeout (20s). Forcing enable.');
-            // 强制设为完成
-            loadedCount = totalAssets;
+            console.warn('Critical loading timeout. Forcing enable.');
+            loadedCount = criticalTotal;
             enableEnterButton();
+            loadRemainingAssets(); // 强制进也触发后台加载
         }
-    }, 20000);
+    }, 10000);
 
 
     // --- 2. Interaction & Slideshow ---
@@ -256,13 +276,24 @@ document.addEventListener('DOMContentLoaded', () => {
         fadeOutAudio(bgm, () => bgm.pause());
         
         video.currentTime = 0;
+        // 尝试开启声音
         video.muted = false;
+        
         // 强制隐藏控件
         video.removeAttribute('controls');
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('x5-playsinline', '');
         
-        video.play().catch(console.error);
+        // 健壮的播放逻辑：尝试有声播放 -> 失败则静音播放
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.warn('Auto-play was prevented. Falling back to muted play.', error);
+                video.muted = true;
+                video.play().catch(e => console.error('Even muted play failed:', e));
+            });
+        }
         
         // 双重保险检测结束
         let isEnded = false;
