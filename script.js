@@ -579,8 +579,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function createParticles(x, y, color, isMain) {
+            // 极限优化：根据设备性能动态调整粒子数量
+            // 电脑：主烟花150，小烟花60
+            // 手机：主烟花60，小烟花20 (大幅减少以防卡顿)
             let count = isMain ? 150 : 60;
-            if (IS_MOBILE) count = isMain ? 80 : 30;
+            if (IS_MOBILE) count = isMain ? 60 : 20;
             
             while(count--) {
                 let p = particlePool.pop();

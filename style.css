@@ -28,6 +28,11 @@ body, html {
     /* 禁止 iOS 橡皮筋回弹 */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    /* 极限优化：禁止双击缩放，提升点击响应速度 */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent; /* 去除点击高亮 */
 }
 
 /* 欢迎页 */
@@ -200,7 +205,8 @@ body, html {
     transform-style: preserve-3d;
     /* 优化过渡曲线 */
     transition: opacity 1.5s linear, transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    /* 移除 will-change 防止内存溢出 */
+    /* 极限优化：启用 GPU 加速，但限制属性以防内存泄漏 */
+    will-change: opacity, transform;
 }
 
 .slide-item.active {
