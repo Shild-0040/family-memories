@@ -12,45 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let slideInterval;
     const SLIDE_DURATION = 5000; // 每张图片停留5秒
 
-    // 随机文案库 (扩充至 30+ 条)
-    const captions = [
-        "时光荏苒 · 岁月静好",
-        "记忆中的微光",
-        "这一刻，即是永恒",
-        "陪伴是最长情的告白",
-        "温暖的瞬间",
-        "爱在日常，才不寻常",
-        "未完待续的故事...",
-        "家，是梦开始的地方",
-        "有些面孔，印在心底",
-        "光阴的故事，由我们书写",
-        "岁月神偷，偷不走回忆",
-        "每一次快门，都是时间的标本",
-        "平凡的日子，泛着光",
-        "这一秒，名为幸福",
-        "记录爱，记录生活",
-        "时光不老，我们不散",
-        "最好的风景，是身边人",
-        "且以深情共白头",
-        "慢品人间烟火色",
-        "闲观万事岁月长",
-        "生活明朗，万物可爱",
-        "目之所及，皆是美好",
-        "定格温暖瞬间",
-        "爱，无声流淌",
-        "岁月悠长，山河无恙",
-        "和你有关的日子，都是好日子",
-        "简单的幸福",
-        "流年笑掷，未来可期",
-        "心中有爱，眼中有光",
-        "以此为证，岁月为名"
-    ];
-
-    // 样式列表
-    const captionStyles = ['default', 'vertical', 'movie-left', 'film-yellow', 'postcard', 'typewriter'];
-    let lastCaptionIndex = -1;
-    let lastStyleIndex = -1;
-
     // 智能预加载函数
     function preloadNextImage(index) {
         // 预加载下两张
@@ -150,25 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         slideInterval = setInterval(nextSlide, SLIDE_DURATION);
     }
 
-    // 3. 随机切换字幕样式逻辑
-    function updateCaptionStyle() {
-        const captionLayer = document.querySelector('.caption-layer');
-        // 移除所有旧样式
-        captionLayer.classList.remove(...captionStyles);
-        
-        // 随机选择一种新样式 (确保不重复)
-        let newStyleIndex;
-        do {
-            newStyleIndex = Math.floor(Math.random() * captionStyles.length);
-        } while (newStyleIndex === lastStyleIndex);
-        
-        lastStyleIndex = newStyleIndex;
-        const style = captionStyles[newStyleIndex];
-        
-        if (style !== 'default') {
-            captionLayer.classList.add(style);
-        }
-    }
+
 
     function showSlide(index) {
         // 预加载后续图片
@@ -194,30 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentSlide.tagName === 'VIDEO') {
             // 视频的话，尝试用第一帧或者保持上一张图
             // 简单起见，可以保持不动，或者如果有封面图可以使用封面
-        }
-
-        // 更新文案 (每3张换一次文案)
-        if (index % 3 === 0) {
-            const captionEl = document.getElementById('caption-text');
-            captionEl.style.opacity = 0;
-            captionEl.style.transform = "translateY(20px)"; // 下沉
-            
-            setTimeout(() => {
-                // 切换文案内容 (确保不重复)
-                let newCaptionIndex;
-                do {
-                    newCaptionIndex = Math.floor(Math.random() * captions.length);
-                } while (newCaptionIndex === lastCaptionIndex);
-                lastCaptionIndex = newCaptionIndex;
-                
-                captionEl.textContent = captions[newCaptionIndex];
-                
-                // 同时切换布局样式！
-                updateCaptionStyle();
-
-                captionEl.style.opacity = 1;
-                captionEl.style.transform = "translateY(0)"; // 上浮复位
-            }, 1000);
         }
 
         // 更新进度条
