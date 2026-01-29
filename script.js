@@ -187,6 +187,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeFireworks = [];
         const activeParticles = [];
 
+        // Audio Pool System
+        const soundPool = Array.from(document.querySelectorAll('.firework-sound'));
+        let soundIndex = 0;
+
+        function playFireworkSound() {
+            // 简单的轮询播放，防止并发限制
+            const sound = soundPool[soundIndex];
+            if (sound) {
+                sound.currentTime = 0;
+                // 随机音调，让声音不单调
+                sound.playbackRate = 0.8 + Math.random() * 0.4;
+                // 随机音量，大烟花更响
+                sound.volume = 0.3 + Math.random() * 0.3;
+                sound.play().catch(() => {}); // 忽略自动播放限制错误
+                
+                soundIndex = (soundIndex + 1) % soundPool.length;
+            }
+        }
+
         function resize() {
             width = window.innerWidth;
             height = window.innerHeight;
@@ -253,6 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (this.distanceTraveled >= this.distanceToTarget) {
                     createParticles(this.tx, this.ty, this.color, this.isMain);
+                    // 爆炸时播放音效
+                    playFireworkSound();
+                    
                     this.active = false;
                     // Return to pool
                     activeFireworks.splice(index, 1);
