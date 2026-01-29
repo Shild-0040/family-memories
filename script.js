@@ -221,18 +221,131 @@ document.addEventListener('DOMContentLoaded', () => {
         slideshowContainer.style.opacity = 0;
         endingScreen.classList.add('visible');
         
-        // 逐行显示寄语
-        const lines = document.querySelectorAll('.ending-line');
-        lines.forEach((line, index) => {
-            setTimeout(() => {
-                line.style.animation = `slideUp 1.5s ease forwards`;
-            }, index * 1500); // 每句间隔1.5秒
-        });
+        // 启动烟花特效
+        startFireworks();
 
-        // 显示重温按钮
+        // 延迟显示文字，等待大烟花绽放
         setTimeout(() => {
-            document.querySelector('.restart-btn').style.opacity = 1;
-        }, lines.length * 1500 + 1000);
+            // 逐行显示寄语
+            const lines = document.querySelectorAll('.ending-line');
+            lines.forEach((line, index) => {
+                setTimeout(() => {
+                    line.style.animation = `slideUp 1.5s ease forwards`;
+                }, index * 1500); // 每句间隔1.5秒
+            });
+
+            // 显示重温按钮
+            setTimeout(() => {
+                document.querySelector('.restart-btn').style.opacity = 1;
+            }, lines.length * 1500 + 1000);
+        }, 3000); // 延迟3秒，让大烟花先放一会儿
+    }
+
+    // 5. 烟花特效系统
+    function startFireworks() {
+        const canvas = document.getElementById('fireworks');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let width, height;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 粒子类
+        class Particle {
+            constructor(x, y, color, type = 'small') {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.type = type;
+                // 大烟花粒子速度更快，扩散更广
+                const velocityMultiplier = type === 'big' ? 6 : 2;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * velocityMultiplier;
+                
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.005;
+                this.gravity = 0.05;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.type === 'big' ? 3 : 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= this.decay;
+            }
+        }
+
+        function createFirework(x, y, type = 'small') {
+            const colors = ['#ff0043', '#14fc56', '#1e90ff', '#ffae00', '#ffff00', '#ff00ff'];
+            const particleCount = type === 'big' ? 150 : 30;
+            // 大烟花颜色统一，小烟花随机多彩
+            const color = type === 'big' ? colors[Math.floor(Math.random() * colors.length)] : null;
+            
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle(
+                    x, 
+                    y, 
+                    color || colors[Math.floor(Math.random() * colors.length)],
+                    type
+                ));
+            }
+        }
+
+        // 动画循环
+        function loop() {
+            // 拖尾效果
+            ctx.globalAlpha = 0.1;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 更新粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].alpha <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            requestAnimationFrame(loop);
+        }
+
+        // 启动循环
+        loop();
+
+        // 阶段一：大烟花连放 (前3秒)
+        let bigFireworksCount = 0;
+        const bigInterval = setInterval(() => {
+            createFirework(width / 2 + (Math.random() - 0.5) * 200, height / 3 + (Math.random() - 0.5) * 100, 'big');
+            bigFireworksCount++;
+            if (bigFireworksCount >= 5) clearInterval(bigInterval);
+        }, 600);
+
+        // 阶段二：持续的零散背景烟花
+        setInterval(() => {
+            if (Math.random() > 0.3) { // 70% 概率生成
+                createFirework(
+                    Math.random() * width, 
+                    Math.random() * height * 0.6, 
+                    'small'
+                );
+            }
+        }, 800);
     }
 
     // 辅助：音乐淡入
