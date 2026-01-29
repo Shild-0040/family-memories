@@ -19,85 +19,145 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndex = 0;
     let slideInterval;
 
-    // --- 1. Extreme Preloader (Full Asset Loading) ---
-    const assetsToLoad = [];
+    // --- 1. Smart Preloader (Progressive Loading) ---
+    // 策略：优先加载前 3 张 + 音频，让用户能立刻进入。剩余的在后台悄悄加载。
+    const CRITICAL_COUNT = 3; 
+    let criticalLoaded = 0;
+    let isEnterEnabled = false;
     
-    // Collect all images and videos
-    slides.forEach(slide => {
+    // 分离关键资源和后台资源
+    const criticalAssets = [];
+    const backgroundAssets = [];
+    
+    // 1. 收集资源
+    slides.forEach((slide, index) => {
         const src = slide.getAttribute('data-src') || slide.src;
-        if (src) {
-            assetsToLoad.push({
-                element: slide,
-                src: src,
-                type: slide.tagName
-            });
+        if (!src) return;
+
+        const asset = {
+            element: slide,
+            src: src,
+            type: slide.tagName,
+            index: index
+        };
+
+        if (index < CRITICAL_COUNT) {
+            criticalAssets.push(asset);
+        } else {
+            backgroundAssets.push(asset);
         }
     });
 
-    let loadedCount = 0;
-    const totalAssets = assetsToLoad.length + 1; // +1 for audio
+    // 总关键资源数 = 关键图片数 + 音频
+    const totalCritical = criticalAssets.length + 1; 
 
-    function updateProgress() {
-        loadedCount++;
-        const percent = Math.floor((loadedCount / totalAssets) * 100);
-        btnText.textContent = `资源加载中... ${Math.min(percent, 100)}%`;
+    // 更新加载进度 (只显示关键资源的进度，给用户极速的感觉)
+    function updateCriticalProgress() {
+        criticalLoaded++;
+        const percent = Math.floor((criticalLoaded / totalCritical) * 100);
         
-        if (loadedCount >= totalAssets) {
+        // 只有未完成时才更新文字，避免倒退
+        if (!isEnterEnabled) {
+            btnText.textContent = `资源加载中... ${Math.min(percent, 99)}%`;
+        }
+        
+        if (criticalLoaded >= totalCritical) {
             enableEnterButton();
+            // 关键资源加载完后，开始加载后台资源
+            loadBackgroundAssets();
         }
     }
 
     function enableEnterButton() {
+        if (isEnterEnabled) return;
+        isEnterEnabled = true;
         btnText.textContent = '开启回忆录';
         enterBtn.style.opacity = '1';
         enterBtn.style.pointerEvents = 'auto';
         enterBtn.classList.add('ready-pulse');
     }
 
-    // Load Audio
+    // 2. 加载关键资源 (立即执行)
+    // 音频
     bgm.load();
     bgm.oncanplaythrough = () => {
-        // Ensure this only counts once
         if (!bgm.dataset.loaded) {
             bgm.dataset.loaded = "true";
-            updateProgress();
+            updateCriticalProgress();
         }
     };
     bgm.onerror = () => {
         if (!bgm.dataset.loaded) {
             bgm.dataset.loaded = "true";
-            updateProgress(); // Count even if failed
+            updateCriticalProgress(); // 失败也算过，不能卡死
         }
     };
 
-    // Load Visual Assets
-    assetsToLoad.forEach(asset => {
+    // 关键图片/视频
+    criticalAssets.forEach(loadAsset);
+
+    function loadAsset(asset, callback) {
         if (asset.type === 'IMG') {
             const img = new Image();
             img.onload = () => {
                 asset.element.src = asset.src;
                 asset.element.removeAttribute('data-src');
-                updateProgress();
+                if (callback) callback();
+                else updateCriticalProgress();
             };
-            img.onerror = updateProgress;
+            img.onerror = () => {
+                if (callback) callback();
+                else updateCriticalProgress();
+            };
             img.src = asset.src;
         } else if (asset.type === 'VIDEO') {
             asset.element.src = asset.src;
             asset.element.removeAttribute('data-src');
+            // 关键视频需要预加载数据
+            asset.element.preload = 'auto'; 
             asset.element.load();
-            asset.element.onloadedmetadata = updateProgress;
-            asset.element.onerror = updateProgress;
+            asset.element.onloadeddata = () => {
+                 if (callback) callback();
+                 else updateCriticalProgress();
+            };
+            asset.element.onerror = () => {
+                 if (callback) callback();
+                 else updateCriticalProgress();
+            };
         }
-    });
+    }
 
-    // Failsafe timeout (8 seconds)
+    // 3. 加载后台资源 (静默执行)
+    function loadBackgroundAssets() {
+        console.log('Critical assets ready. Starting background load...');
+        backgroundAssets.forEach(asset => {
+            if (asset.type === 'IMG') {
+                // 图片直接加载
+                const img = new Image();
+                img.onload = () => {
+                    asset.element.src = asset.src;
+                    asset.element.removeAttribute('data-src');
+                };
+                img.src = asset.src;
+            } else if (asset.type === 'VIDEO') {
+                // 后台视频只加载元数据，节省流量
+                asset.element.src = asset.src;
+                asset.element.removeAttribute('data-src');
+                asset.element.preload = 'metadata';
+            }
+        });
+    }
+
+    // 容错机制 (3秒后强制开启，不管网多慢)
     setTimeout(() => {
-        if (loadedCount < totalAssets) {
-            console.warn('Loading timed out, forcing start.');
-            loadedCount = totalAssets;
+        if (!isEnterEnabled) {
+            console.warn('Loading slow, forcing start.');
+            criticalLoaded = totalCritical;
             enableEnterButton();
+            // 强制开启后，也要触发后台加载
+            loadBackgroundAssets();
         }
-    }, 8000);
+    }, 3000);
 
 
     // --- 2. Interaction & Slideshow ---
