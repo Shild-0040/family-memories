@@ -218,9 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 兜底机制：有些浏览器 onended 不准，用 timeupdate 辅助
         video.ontimeupdate = () => {
-            if (video.duration && video.currentTime >= video.duration - 0.5) {
-                // 提前 0.5s 预备结束，防止黑屏
-                triggerEnd();
+            // 关键修复：确保 duration 是有效数字，且视频确实播放了一段时间 (比如 > 1秒)
+            // 防止刚开始加载时 duration 可能为 NaN 或很小，导致误判
+            if (video.duration && !isNaN(video.duration) && video.duration > 1) {
+                // 只有当播放进度真的接近尾声时才触发
+                if (video.currentTime >= video.duration - 0.5) {
+                    triggerEnd();
+                }
             }
         };
     }
