@@ -83,9 +83,9 @@ body, html {
     overflow: hidden;
     transition: all 0.5s ease;
     
-    /* 核心修复：手机端可能不支持 forward fill mode 导致 opacity 保持为 0 */
-    opacity: 0; 
-    animation: fadeIn 1s ease-out 0.5s forwards;
+    /* 核心修复：移除 opacity: 0，改用动画控制 */
+    /* opacity: 0; */
+    animation: fadeIn 1s ease-out 0.5s backwards; /* backwards 确保动画开始前保持第一帧状态(即0) */
     
     /* 增大点击热区 */
     min-width: 180px; 
@@ -98,6 +98,12 @@ body, html {
     border-color: var(--accent-color);
     color: var(--accent-color);
     box-shadow: 0 0 20px rgba(212, 163, 115, 0.2);
+}
+
+/* 关键帧动画 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* 呼吸动画 */

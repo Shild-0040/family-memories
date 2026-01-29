@@ -1,6 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const enterBtn = document.getElementById('enter-btn');
+    // JS 双重保险：强制显示按钮，防止 CSS 动画失效
+    setTimeout(() => {
+        if (getComputedStyle(enterBtn).opacity === '0') {
+            enterBtn.style.opacity = '1';
+        }
+    }, 1000);
+
     const welcomeScreen = document.getElementById('welcome-screen');
     const slideshowContainer = document.getElementById('slideshow-container');
     const slideBlurBg = document.getElementById('slide-blur-bg');
