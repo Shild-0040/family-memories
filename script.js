@@ -199,10 +199,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         video.currentTime = 0;
         video.muted = false;
+        // 强制隐藏控件
+        video.removeAttribute('controls');
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        
         video.play().catch(console.error);
         
-        video.onended = () => {
+        // 双重保险检测结束
+        let isEnded = false;
+        const triggerEnd = () => {
+            if (isEnded) return;
+            isEnded = true;
             endSlideshow();
+        };
+
+        video.onended = triggerEnd;
+        
+        // 兜底机制：有些浏览器 onended 不准，用 timeupdate 辅助
+        video.ontimeupdate = () => {
+            if (video.duration && video.currentTime >= video.duration - 0.5) {
+                // 提前 0.5s 预备结束，防止黑屏
+                triggerEnd();
+            }
         };
     }
 
