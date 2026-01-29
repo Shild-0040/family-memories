@@ -19,52 +19,41 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndex = 0;
     let slideInterval;
 
-    // --- 1. Smart Preloader (Progressive Loading) ---
-    // 策略：优先加载前 3 张 + 音频，让用户能立刻进入。剩余的在后台悄悄加载。
-    const CRITICAL_COUNT = 3; 
-    let criticalLoaded = 0;
+    // --- 1. Extreme Preloader (Full Asset Loading - Strict Mode) ---
+    // 策略：全量预加载。必须等待所有图片、视频、音频全部就绪才解锁。
+    // 用户明确要求：宁愿等久一点，也要保证播放流畅。
+    
+    let loadedCount = 0;
     let isEnterEnabled = false;
-    
-    // 分离关键资源和后台资源
-    const criticalAssets = [];
-    const backgroundAssets = [];
-    
-    // 1. 收集资源
+    const assetsToLoad = [];
+
+    // 1. 收集所有资源
     slides.forEach((slide, index) => {
         const src = slide.getAttribute('data-src') || slide.src;
         if (!src) return;
 
-        const asset = {
+        assetsToLoad.push({
             element: slide,
             src: src,
             type: slide.tagName,
             index: index
-        };
-
-        if (index < CRITICAL_COUNT) {
-            criticalAssets.push(asset);
-        } else {
-            backgroundAssets.push(asset);
-        }
+        });
     });
 
-    // 总关键资源数 = 关键图片数 + 音频
-    const totalCritical = criticalAssets.length + 1; 
+    // 总资源数 = 所有视觉资源 + 背景音乐
+    const totalAssets = assetsToLoad.length + 1; 
 
-    // 更新加载进度 (只显示关键资源的进度，给用户极速的感觉)
-    function updateCriticalProgress() {
-        criticalLoaded++;
-        const percent = Math.floor((criticalLoaded / totalCritical) * 100);
+    // 更新加载进度
+    function updateProgress() {
+        loadedCount++;
+        const percent = Math.floor((loadedCount / totalAssets) * 100);
         
-        // 只有未完成时才更新文字，避免倒退
         if (!isEnterEnabled) {
             btnText.textContent = `资源加载中... ${Math.min(percent, 99)}%`;
         }
         
-        if (criticalLoaded >= totalCritical) {
+        if (loadedCount >= totalAssets) {
             enableEnterButton();
-            // 关键资源加载完后，开始加载后台资源
-            loadBackgroundAssets();
         }
     }
 
@@ -75,89 +64,82 @@ document.addEventListener('DOMContentLoaded', () => {
         enterBtn.style.opacity = '1';
         enterBtn.style.pointerEvents = 'auto';
         enterBtn.classList.add('ready-pulse');
+        console.log('All assets loaded. Ready to start.');
     }
 
-    // 2. 加载关键资源 (立即执行)
-    // 音频
+    // 2. 加载音频
     bgm.load();
-    bgm.oncanplaythrough = () => {
-        if (!bgm.dataset.loaded) {
-            bgm.dataset.loaded = "true";
-            updateCriticalProgress();
-        }
-    };
-    bgm.onerror = () => {
-        if (!bgm.dataset.loaded) {
-            bgm.dataset.loaded = "true";
-            updateCriticalProgress(); // 失败也算过，不能卡死
-        }
-    };
+    // 兼容处理：有些浏览器 cached 状态下可能不触发 canplaythrough
+    if (bgm.readyState >= 4) {
+        updateProgress();
+    } else {
+        bgm.oncanplaythrough = () => {
+            if (!bgm.dataset.loaded) {
+                bgm.dataset.loaded = "true";
+                updateProgress();
+            }
+        };
+        bgm.onerror = () => {
+            if (!bgm.dataset.loaded) {
+                bgm.dataset.loaded = "true";
+                console.warn('Audio load failed, skipping.');
+                updateProgress(); 
+            }
+        };
+    }
 
-    // 关键图片/视频
-    criticalAssets.forEach(loadAsset);
-
-    function loadAsset(asset, callback) {
+    // 3. 加载视觉资源 (并行加载)
+    assetsToLoad.forEach(asset => {
         if (asset.type === 'IMG') {
             const img = new Image();
             img.onload = () => {
+                // 加载成功后，将真实 src 赋给 DOM 元素
                 asset.element.src = asset.src;
                 asset.element.removeAttribute('data-src');
-                if (callback) callback();
-                else updateCriticalProgress();
+                updateProgress();
             };
             img.onerror = () => {
-                if (callback) callback();
-                else updateCriticalProgress();
+                console.warn(`Image load failed: ${asset.src}`);
+                updateProgress(); // 失败也计数，避免死锁
             };
             img.src = asset.src;
         } else if (asset.type === 'VIDEO') {
             asset.element.src = asset.src;
             asset.element.removeAttribute('data-src');
-            // 关键视频需要预加载数据
-            asset.element.preload = 'auto'; 
+            asset.element.preload = 'auto'; // 强制预加载视频数据
             asset.element.load();
-            asset.element.onloadeddata = () => {
-                 if (callback) callback();
-                 else updateCriticalProgress();
+            
+            // 视频只要加载了足够当前播放的数据就算成功
+            const onVideoLoaded = () => {
+                if (!asset.element.dataset.loaded) {
+                    asset.element.dataset.loaded = "true";
+                    updateProgress();
+                }
             };
+            
+            // 兼容多种事件，确保能捕获完成状态
+            asset.element.onloadeddata = onVideoLoaded;
+            asset.element.oncanplay = onVideoLoaded;
             asset.element.onerror = () => {
-                 if (callback) callback();
-                 else updateCriticalProgress();
+                if (!asset.element.dataset.loaded) {
+                    asset.element.dataset.loaded = "true";
+                    console.warn(`Video load failed: ${asset.src}`);
+                    updateProgress();
+                }
             };
         }
-    }
+    });
 
-    // 3. 加载后台资源 (静默执行)
-    function loadBackgroundAssets() {
-        console.log('Critical assets ready. Starting background load...');
-        backgroundAssets.forEach(asset => {
-            if (asset.type === 'IMG') {
-                // 图片直接加载
-                const img = new Image();
-                img.onload = () => {
-                    asset.element.src = asset.src;
-                    asset.element.removeAttribute('data-src');
-                };
-                img.src = asset.src;
-            } else if (asset.type === 'VIDEO') {
-                // 后台视频只加载元数据，节省流量
-                asset.element.src = asset.src;
-                asset.element.removeAttribute('data-src');
-                asset.element.preload = 'metadata';
-            }
-        });
-    }
-
-    // 容错机制 (3秒后强制开启，不管网多慢)
+    // 容错机制：20秒超时
+    // 如果网络实在太差，20秒后强制允许进入，防止用户流失
     setTimeout(() => {
         if (!isEnterEnabled) {
-            console.warn('Loading slow, forcing start.');
-            criticalLoaded = totalCritical;
+            console.warn('Loading timeout (20s). Forcing enable.');
+            // 强制设为完成
+            loadedCount = totalAssets;
             enableEnterButton();
-            // 强制开启后，也要触发后台加载
-            loadBackgroundAssets();
         }
-    }, 3000);
+    }, 20000);
 
 
     // --- 2. Interaction & Slideshow ---
