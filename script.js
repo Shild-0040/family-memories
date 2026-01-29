@@ -187,81 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeFireworks = [];
         const activeParticles = [];
 
-        // Web Audio API Context
-        let audioCtx;
-        
-        // 初始化音频上下文 (必须在用户交互中触发)
-        function initAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-        
-        // 尝试在开始时就初始化 (虽然可能被拦截，但值得一试)
-        try { initAudio(); } catch(e) {}
-        
-        // 在任何可能的点击中再次尝试唤醒
-        document.addEventListener('click', initAudio, { once: true });
-        document.addEventListener('touchstart', initAudio, { once: true });
-
-        // 合成爆炸音效 (无需加载文件)
-        function playExplosionSound(isBig) {
-            if (!audioCtx) return;
-            
-            const t = audioCtx.currentTime;
-            
-            // 1. 核心爆炸声 (白噪音)
-            const bufferSize = audioCtx.sampleRate * 2; // 2秒缓冲
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
-            
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-            
-            // 滤波器 (模拟沉闷感)
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = isBig ? 400 : 800; // 大烟花更低沉
-            
-            // 包络 (Attack & Decay)
-            const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(isBig ? 0.8 : 0.3, t + 0.05); // 瞬间响度
-            gain.gain.exponentialRampToValueAtTime(0.01, t + (isBig ? 1.5 : 0.8)); // 衰减
-            
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            noise.start(t);
-            noise.stop(t + 2);
-            
-            // 2. 尖啸声 (可选，增加层次)
-            if (Math.random() > 0.5) {
-                const osc = audioCtx.createOscillator();
-                const oscGain = audioCtx.createGain();
-                
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(random(200, 400), t);
-                osc.frequency.exponentialRampToValueAtTime(50, t + 0.5);
-                
-                oscGain.gain.setValueAtTime(0.1, t);
-                oscGain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-                
-                osc.connect(oscGain);
-                oscGain.connect(audioCtx.destination);
-                osc.start(t);
-                osc.stop(t + 0.5);
-            }
-        }
-
         function resize() {
             width = window.innerWidth;
             height = window.innerHeight;
@@ -328,9 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (this.distanceTraveled >= this.distanceToTarget) {
                     createParticles(this.tx, this.ty, this.color, this.isMain);
-                    // 爆炸时播放音效 (合成版)
-                    playExplosionSound(this.isMain);
-                    
                     this.active = false;
                     // Return to pool
                     activeFireworks.splice(index, 1);
